@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Identificação Necessária</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 40px; }
+        input { padding: 10px; margin: 10px 0; width: 80%; }
+        button { padding: 10px 20px; background: #0070f3; color: white; border: none; border-radius: 5px; cursor: pointer;}
+    </style>
+</head>
+<body>
+    <h2>🔒 Quem é você?</h2>
+    <p>Identifique-se para acessar o conteúdo.</p>
+    
+    <form action="/autenticar" method="post">
+        <input type="text" name="nome_usuario" placeholder="Seu Nome ou ID" required>
+        
+        <input type="hidden" name="proximo_passo" value="{{ codigo_alvo }}">
+        
+        <br>
+        <button type="submit">Entrar</button>
+    </form>
+</body>
+</html>
