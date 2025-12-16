@@ -5,12 +5,11 @@ app = FastAPI()
 
 @app.get("/")
 def home():
-    return {"status": "Online", "msg": "API rodando na Vercel!"}
+    return {"status": "Online", "msg": "Funciona!"}
 
 @app.post("/validar_qr")
 def validar(dados: dict):
-    # Simulação simples
-    return {"recebido": dados, "acesso": "permitido"}
+    return {"recebido": dados}
 
-# Esta linha é OBRIGATÓRIA para funcionar na Vercel/AWS Lambda
+# Esta linha é crítica. Ela deve estar no final e SEM indentação.
 handler = Mangum(app)
