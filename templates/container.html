@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conteúdo do Container</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 800px; }
+        h1 { margin-top: 0; }
+        .label { font-weight: bold; display: block; margin-top: 10px; }
+        .breadcrumb { color: #555; font-size: 0.9em; margin-bottom: 15px; }
+        .breadcrumb span::after { content: " > "; }
+        .breadcrumb span:last-child::after { content: ""; }
+        
+        .list-group { margin-top: 10px; border: 1px solid #eee; border-radius: 4px; }
+        .list-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .list-item:last-child { border-bottom: none; }
+        .list-item a { text-decoration: none; color: #007bff; }
+        .type-badge { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; background-color: #eee; color: #555; }
+        
+        .actions { margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>{{ container_view.info.nome }}</h1>
+        
+        <div class="breadcrumb">
+            {% if container_view.caminho_pao %}
+                {% for crumb in container_view.caminho_pao %}
+                    <span><a href="/access/{{ crumb.id }}">{{ crumb.nome }}</a></span>
+                {% endfor %}
+            {% else %}
+                <span>Raiz</span>
+            {% endif %}
+            <span>{{ container_view.info.nome }}</span>
+        </div>
+
+        <span class="label">Conteúdo:</span>
+        
+        <div class="list-group">
+            {% if not container_view.subcontainers and not container_view.items %}
+                <div class="list-item">Vazio</div>
+            {% endif %}
+
+            <!-- Subcontainers -->
+            {% for sub in container_view.subcontainers %}
+            <div class="list-item">
+                <div>
+                    <span class="type-badge">Container</span>
+                    <a href="/access/{{ sub.id }}"><strong>{{ sub.nome }}</strong></a>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Items -->
+            {% for item in container_view.items %}
+            <div class="list-item">
+                <div>
+                    <span class="type-badge">Item</span>
+                    <a href="/access/{{ item.id }}">{{ item.nome }}</a>
+                </div>
+                <small>{{ item.descricao or "" }}</small>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="actions">
+            <a href="/">Voltar para Início</a>
+        </div>
+    </div>
+
+</body>
+</html>
