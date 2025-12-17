@@ -21,9 +21,9 @@ async def lifespan(app: FastAPI):
     global db_client, db
     # Só conecta no Mongo REAL se não estivermos em modo de teste
     if not db:  #type: ignore
-        mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+        mongo_uri = os.getenv("MONGO_URI")
         db_client = MongoClient(mongo_uri)
-        db = db_client["sistema_inventario"]
+        db = db_client["inventario"]
 
     yield
 
