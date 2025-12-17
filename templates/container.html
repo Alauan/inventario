@@ -39,7 +39,7 @@
         <div class="breadcrumb">
             {% if container_view.caminho_pao %}
                 {% for crumb in container_view.caminho_pao %}
-                    <span><a href="/access/{{ crumb.id }}">{{ crumb.nome }}</a></span>
+                    <span><a href="/access/{{ crumb._id }}">{{ crumb.nome }}</a></span>
                 {% endfor %}
             {% else %}
                 <span>Raiz</span>
@@ -64,7 +64,7 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Container</span>
-                    <a href="/access/{{ sub.id }}">{{ sub.nome }}</a>
+                    <a href="/access/{{ sub._id }}">{{ sub.nome }}</a>
                 </div>
             </div>
             {% endfor %}
@@ -73,7 +73,7 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Item</span>
-                    <a href="/access/{{ item.id }}">{{ item.nome }}</a>
+                    <a href="/access/{{ item._id }}">{{ item.nome }}</a>
                 </div>
                 <div style="font-size: 0.85em; color: #666;">
                     {{ item.descricao or "" }}
@@ -92,7 +92,7 @@
         <p style="font-size: 0.9em; color: #666;">Este item terá origem em: <strong>{{ container_view.info.nome }}</strong></p>
         
         <form action="/web/create_item" method="POST">
-            <input type="hidden" name="container_id" value="{{ container_view.info.id }}">
+            <input type="hidden" name="container_id" value="{{ container_view.info._id }}">
             
             <label for="nome">Nome do Item</label>
             <input type="text" id="nome" name="nome" placeholder="Ex: Parafusadeira" required autofocus>
