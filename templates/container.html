@@ -6,7 +6,7 @@
     <title>Conteúdo do Container</title>
     <style>
         body { font-family: sans-serif; margin: 20px; }
-        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 800px; }
+        .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 800px; margin: 0 auto; }
         h1 { margin-top: 0; }
         .label { font-weight: bold; display: block; margin-top: 10px; }
         .breadcrumb { color: #555; font-size: 0.9em; margin-bottom: 15px; }
@@ -14,12 +14,21 @@
         .breadcrumb span:last-child::after { content: ""; }
         
         .list-group { margin-top: 10px; border: 1px solid #eee; border-radius: 4px; }
-        .list-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .list-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .list-item:last-child { border-bottom: none; }
-        .list-item a { text-decoration: none; color: #007bff; }
-        .type-badge { font-size: 0.8em; padding: 2px 6px; border-radius: 4px; background-color: #eee; color: #555; }
+        .list-item a { text-decoration: none; color: #007bff; font-weight: bold; }
+        .type-badge { font-size: 0.75em; padding: 3px 8px; border-radius: 10px; background-color: #f0f0f0; color: #666; margin-right: 8px; vertical-align: middle; }
         
-        .actions { margin-top: 20px; }
+        .actions { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-primary { background-color: #0070f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; }
+        .btn-secondary { color: #666; text-decoration: none; }
+
+        /* Estilos do Modal (Dialog) */
+        dialog { border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 20px; width: 90%; max-width: 400px; }
+        dialog::backdrop { background: rgba(0,0,0,0.5); }
+        input { width: 100%; padding: 8px; margin: 8px 0 16px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-cancel { background: #eee; color: #333; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -38,39 +47,65 @@
             <span>{{ container_view.info.nome }}</span>
         </div>
 
+        <div style="margin: 20px 0;">
+            <button class="btn-primary" onclick="document.getElementById('modalItem').showModal()">
+                + Adicionar Item Aqui
+            </button>
+        </div>
+
         <span class="label">Conteúdo:</span>
         
         <div class="list-group">
             {% if not container_view.subcontainers and not container_view.items %}
-                <div class="list-item">Vazio</div>
+                <div class="list-item" style="color: #999;">Container Vazio</div>
             {% endif %}
 
-            <!-- Subcontainers -->
             {% for sub in container_view.subcontainers %}
             <div class="list-item">
                 <div>
                     <span class="type-badge">Container</span>
-                    <a href="/access/{{ sub.id }}"><strong>{{ sub.nome }}</strong></a>
+                    <a href="/access/{{ sub.id }}">{{ sub.nome }}</a>
                 </div>
             </div>
             {% endfor %}
 
-            <!-- Items -->
             {% for item in container_view.items %}
             <div class="list-item">
                 <div>
                     <span class="type-badge">Item</span>
                     <a href="/access/{{ item.id }}">{{ item.nome }}</a>
                 </div>
-                <small>{{ item.descricao or "" }}</small>
+                <div style="font-size: 0.85em; color: #666;">
+                    {{ item.descricao or "" }}
+                </div>
             </div>
             {% endfor %}
         </div>
 
         <div class="actions">
-            <a href="/">Voltar para Início</a>
+            <a href="/" class="btn-secondary">← Voltar para Início</a>
         </div>
     </div>
+
+    <dialog id="modalItem">
+        <h3 style="margin-top: 0;">Novo Item</h3>
+        <p style="font-size: 0.9em; color: #666;">Este item terá origem em: <strong>{{ container_view.info.nome }}</strong></p>
+        
+        <form action="/web/create_item" method="POST">
+            <input type="hidden" name="container_id" value="{{ container_view.info.id }}">
+            
+            <label for="nome">Nome do Item</label>
+            <input type="text" id="nome" name="nome" placeholder="Ex: Parafusadeira" required autofocus>
+            
+            <label for="descricao">Descrição (Opcional)</label>
+            <input type="text" id="descricao" name="descricao" placeholder="Marca, cor, etc.">
+
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modalItem').close()">Cancelar</button>
+                <button type="submit" class="btn-primary">Criar Item</button>
+            </div>
+        </form>
+    </dialog>
 
 </body>
 </html>

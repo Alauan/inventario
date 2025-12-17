@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware # cookies autenticados
@@ -30,11 +30,38 @@ async def lifespan(app: FastAPI):
     if db_client:
         db_client.close()
 
-app = FastAPI(lifespan=lifespan)
+
+async def verificar_login_global(request: Request):
+    # Lista de rotas que são PÚBLICAS (não precisam de login)
+    rotas_publicas = [
+        "/login",       # A página de login
+        "/autenticar",  # O endpoint que processa o login
+        "/docs",        # Documentação do FastAPI (opcional)
+        "/openapi.json" # Necessário para o /docs
+    ]
+    
+    # Se a rota atual for pública, deixa passar
+    if request.url.path in rotas_publicas:
+        return
+
+    # Verifica se o usuário está na sessão
+    usuario = request.session.get("usuario_logado")
+    
+    if not usuario:
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
+
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verificar_login_global)])
 cookie_key = os.getenv("COOKIE_KEY")
 if cookie_key:
     app.add_middleware(SessionMiddleware, secret_key=cookie_key)
 
+@app.get("/login", response_class=HTMLResponse)
+def pagina_login(request: Request):
+    # Renderiza o login.html mas sem um "código alvo" específico
+    return templates.TemplateResponse(
+        "login.html", 
+        context={"request": request, "codigo_alvo": "home", "erro": None}
+    )
 
 # Inicializa templates
 templates = Jinja2Templates(directory="templates")
@@ -71,6 +98,33 @@ def create_item(item: Item):
 def create_owner(owner: Owner):
     db.owners.insert_one(owner.model_dump(by_alias=True))
     return {"status": "criado", "id": owner.id}
+
+
+@app.post("/web/create_item")
+async def web_create_item(
+    request: Request,
+    nome: str = Form(...),
+    descricao: str = Form(None),
+    container_id: str = Form(...)):
+    """
+    Cria um item via formulário Web, definindo a origem e localização atual
+    como o container onde o botão foi clicado.
+    """
+    # 1. Cria o objeto Item
+    # Nota: Definimos tanto container_id quanto original_container_id
+    novo_item = Item(
+        nome=nome,
+        descricao=descricao,
+        container_id=container_id,
+        original_container_id=container_id,
+        owner_id=request.session.get("usuario_logado")
+    )
+    
+    # 2. Salva no banco
+    db.items.insert_one(novo_item.model_dump(by_alias=True))
+    
+    # 3. Redireciona de volta para a visualização do container
+    return RedirectResponse(url=f"/access/{container_id}", status_code=303)
 
 
 # 2. VISUALIZAR (O "Lazy Loading")
@@ -182,9 +236,9 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
         )
     
     # Verifica se o usuário já existe pelo CPF
-    usuario_existente = db.owners.find_one({"cpf": cpf_usuario})
+    usuario = db.owners.find_one({"cpf": cpf_usuario})
     
-    if usuario_existente:
+    if usuario:
         # Atualiza o nome se o CPF já existe
         db.owners.update_one(
             {"cpf": cpf_usuario},
@@ -192,28 +246,19 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
         )
     else:
         # Cria um novo usuário se o CPF não existe
-        novo_usuario = Owner(nome=nome_usuario, cpf=cpf_usuario)
-        db.owners.insert_one(novo_usuario.model_dump(by_alias=True))
+        usuario_novo = Owner(nome=nome_usuario, cpf=cpf_usuario)
+        db.owners.insert_one(usuario_novo.model_dump(by_alias=True))
+        usuario = usuario_novo.model_dump()
 
     url_destino = f"/access/{proximo_passo}"
     response = RedirectResponse(url=url_destino, status_code=303)
     
-    request.session["usuario_logado"] = nome_usuario
+    request.session["usuario_logado"] = usuario["_id"]
     
     return response
 
 @app.get("/access/{codigo}", response_class=HTMLResponse)
 async def ler_qr_code(request: Request, codigo: str):
-    
-    # VERIFICAÇÃO: O usuário tem o cookie?
-    usuario_nome = request.session.get("usuario_logado")
-
-    if not usuario_nome:
-        return templates.TemplateResponse(
-            "login.html", 
-            {"request": request, "codigo_alvo": codigo}
-        )
-   
     # 1. Tenta achar como ITEM
     item_check = db.items.find_one({"_id": codigo})
     if item_check:
