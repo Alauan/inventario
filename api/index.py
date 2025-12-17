@@ -2,9 +2,9 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import MongoClient
-from structs import Container, Item, ContainerView, ItemView
 from contextlib import asynccontextmanager
 import os
+from .structs import Container, Item, ContainerView, ItemView
 
 
 # Variável global do banco (padrão None)
