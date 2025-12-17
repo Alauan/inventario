@@ -1,6 +1,8 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pymongo import MongoClient
+import structs
 import os
 
 app = FastAPI()
@@ -9,6 +11,12 @@ app = FastAPI()
 current_dir = os.path.dirname(os.path.abspath(__file__))
 templates_dir = os.path.join(current_dir, "..", "templates")
 templates = Jinja2Templates(directory=templates_dir)
+
+MONGO_URI = os.getenv("MONGO_URI")
+client_mongo = MongoClient(MONGO_URI)
+
+
+
 # --- ROTAS ---
 
 @app.get("/")
@@ -22,7 +30,7 @@ async def login(nome_usuario: str = Form(...), proximo_passo: str = Form(...)):
     Recebe o nome do formulário e cria o Cookie.
     """
     # Cria o redirecionamento de volta para o QR Code que ele tentou ler
-    url_destino = f"/qr/{proximo_passo}"
+    url_destino = f"/access/{proximo_passo}"
     response = RedirectResponse(url=url_destino, status_code=303)
     
     # A MÁGICA: Define o Cookie
@@ -33,9 +41,11 @@ async def login(nome_usuario: str = Form(...), proximo_passo: str = Form(...)):
     
     return response
 
+@app.patch("/move_item/{item_id}/{novo_container}")
+async def move_item_endpoint(item_id: int, novo_container: str):
 
 
-@app.get("/qr/{codigo}", response_class=HTMLResponse)
+@app.get("/access/{codigo}", response_class=HTMLResponse)
 async def ler_qr_code(request: Request, codigo: str):
     
     # VERIFICAÇÃO: O usuário tem o cookie?
