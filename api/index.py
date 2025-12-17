@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware # cookies autenticados
 from pymongo import MongoClient
 from pymongo.database import Database
 from contextlib import asynccontextmanager
@@ -19,7 +20,6 @@ def get_db():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db_client, db
-    # Só conecta no Mongo REAL se não estivermos em modo de teste
     if not db:  #type: ignore
         mongo_uri = os.getenv("MONGO_URI")
         db_client = MongoClient(mongo_uri)
@@ -31,6 +31,10 @@ async def lifespan(app: FastAPI):
         db_client.close()
 
 app = FastAPI(lifespan=lifespan)
+cookie_key = os.getenv("COOKIE_KEY")
+if cookie_key:
+    app.add_middleware(SessionMiddleware, secret_key=cookie_key)
+
 
 # Inicializa templates
 templates = Jinja2Templates(directory="templates")
@@ -164,19 +168,37 @@ def home():
 
 # --- 1. ROTA DE AUTENTICAÇÃO (Recebe o formulário) ---
 @app.post("/autenticar")
-async def login(nome_usuario: str = Form(...), proximo_passo: str = Form(...)):
+async def login(request: Request, nome_usuario: str = Form(...), senha: str = Form(...), cpf_usuario: str = Form(...), proximo_passo: str = Form(...)):
     """
     Recebe o nome do formulário e cria o Cookie.
     """
     # Cria o redirecionamento de volta para o QR Code que ele tentou ler
+    SYSTEM_PASSWORD = os.getenv("SYSTEM_PASSWORD", "senha123")
+
+    if senha != SYSTEM_PASSWORD:
+        return templates.TemplateResponse(
+            "login.html", 
+            {"request": request, "codigo_alvo": proximo_passo, "erro": "Senha incorreta!"}
+        )
+    
+    # Verifica se o usuário já existe pelo CPF
+    usuario_existente = db.owners.find_one({"cpf": cpf_usuario})
+    
+    if usuario_existente:
+        # Atualiza o nome se o CPF já existe
+        db.owners.update_one(
+            {"cpf": cpf_usuario},
+            {"$set": {"nome": nome_usuario}}
+        )
+    else:
+        # Cria um novo usuário se o CPF não existe
+        novo_usuario = Owner(nome=nome_usuario, cpf=cpf_usuario)
+        db.owners.insert_one(novo_usuario.model_dump(by_alias=True))
+
     url_destino = f"/access/{proximo_passo}"
     response = RedirectResponse(url=url_destino, status_code=303)
     
-    # A MÁGICA: Define o Cookie
-    # key="usuario_logado": nome da variável
-    # value=nome_usuario: o valor (ex: "Carlos")
-    # max_age=31536000: Duração em segundos (1 ano). Depois disso expira.
-    response.set_cookie(key="usuario_logado", value=nome_usuario, max_age=31536000)
+    request.session["usuario_logado"] = nome_usuario
     
     return response
 
@@ -184,26 +206,23 @@ async def login(nome_usuario: str = Form(...), proximo_passo: str = Form(...)):
 async def ler_qr_code(request: Request, codigo: str):
     
     # VERIFICAÇÃO: O usuário tem o cookie?
-    usuario_nome = request.cookies.get("usuario_logado")
+    usuario_nome = request.session.get("usuario_logado")
 
-    # SE NÃO TIVER O COOKIE: Manda para o Login
     if not usuario_nome:
         return templates.TemplateResponse(
             "login.html", 
-            {"request": request, "codigo_alvo": codigo} # Passamos o código para o HTML lembrar
+            {"request": request, "codigo_alvo": codigo}
         )
-    
-    # SE TIVER O COOKIE: Mostra o conteúdo
-    
+   
     # 1. Tenta achar como ITEM
-    item_check = db.items.find_one({"id": codigo}, {"_id": 1})
+    item_check = db.items.find_one({"_id": codigo})
     if item_check:
         # Reutiliza a lógica de visualização de item
         data = view_item_contents(codigo)
         return templates.TemplateResponse("item.html", {"request": request, "item_view": data})
 
     # 2. Tenta achar como CONTAINER
-    container_check = db.containers.find_one({"id": codigo}, {"_id": 1})
+    container_check = db.containers.find_one({"_id": codigo})
     if container_check:
         # Reutiliza a lógica de visualização de container
         data = view_container_contents(codigo)
