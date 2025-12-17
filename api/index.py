@@ -2,14 +2,15 @@ from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pymongo import MongoClient
+from pymongo.database import Database
 from contextlib import asynccontextmanager
 import os
-from .structs import Container, Item, ContainerView, ItemView
+from .structs import Container, Item, ContainerView, ItemView, Owner
 
 
 # Variável global do banco (padrão None)
 db_client = None
-db = None
+db: Database = None #type: ignore
 
 def get_db():
     """Função que retorna o banco. Se for teste, podemos sobrescrever isso."""
@@ -19,7 +20,7 @@ def get_db():
 async def lifespan(app: FastAPI):
     global db_client, db
     # Só conecta no Mongo REAL se não estivermos em modo de teste
-    if not db: 
+    if not db:  #type: ignore
         mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017")
         db_client = MongoClient(mongo_uri)
         db = db_client["sistema_inventario"]
@@ -37,37 +38,35 @@ templates = Jinja2Templates(directory="templates")
 # --- FUNÇÕES AUXILIARES ---
 
 def get_breadcrumbs(container_id: str) -> list:
-    """
-    Sobe a árvore recursivamente para montar o caminho: 
-    Ex: [{"id": "1", "nome": "Galpão"}, {"id": "5", "nome": "Caixa Azul"}]
-    """
     caminho = []
     atual_id = container_id
     
-    # Loop para subir até a raiz (limite de 10 níveis para segurança)
     for _ in range(10):
         if not atual_id:
             break
-        container = db.containers.find_one({"id": atual_id}, {"_id": 0, "id": 1, "nome": 1, "parent_id": 1})
+        container = db.containers.find_one({"_id": atual_id})
         if not container:
             break
         
-        caminho.insert(0, {"id": container["id"], "nome": container["nome"]}) # Adiciona no início
+        caminho.insert(0, {"id": container["_id"], "nome": container["nome"]}) 
         atual_id = container.get("parent_id")
         
     return caminho
 
-
 @app.post("/containers/")
 def create_container(container: Container):
-    # Salvamos apenas os dados planos. Sem recursão.
-    db.containers.insert_one(container.model_dump())
+    db.containers.insert_one(container.model_dump(by_alias=True))
     return {"status": "criado", "id": container.id}
 
 @app.post("/items/")
 def create_item(item: Item):
-    db.items.insert_one(item.model_dump())
+    db.items.insert_one(item.model_dump(by_alias=True))
     return {"status": "criado", "id": item.id}
+
+@app.post("/owners/")
+def create_owner(owner: Owner):
+    db.owners.insert_one(owner.model_dump(by_alias=True))
+    return {"status": "criado", "id": owner.id}
 
 
 # 2. VISUALIZAR (O "Lazy Loading")
@@ -76,14 +75,14 @@ def create_item(item: Item):
 def view_container_contents(container_id: str):
     
     # A. Busca os dados do container atual
-    container_data = db.containers.find_one({"id": container_id}, {"_id": 0})
+    container_data = db.containers.find_one({"_id": container_id})
     if not container_data:
         raise HTTPException(status_code=404, detail="Container não encontrado")
     
     # B. Busca QUEM ESTÁ DENTRO (Filhos imediatos)
     # Isso é muito rápido porque o MongoDB indexa o campo 'parent_id' e 'container_id'
-    subcontainers = list(db.containers.find({"parent_id": container_id}, {"_id": 0}))
-    items = list(db.items.find({"container_id": container_id}, {"_id": 0}))
+    subcontainers = list(db.containers.find({"parent_id": container_id}))
+    items = list(db.items.find({"container_id": container_id}))
     
     # C. Gera o caminho (Breadcrumbs) para o usuário saber onde está
     breadcrumbs = get_breadcrumbs(container_id)
@@ -99,7 +98,7 @@ def view_container_contents(container_id: str):
 @app.get(path="/view_item/{item_id}", response_model=ItemView)
 def view_item_contents(item_id: str):
     # A. Busca os dados do item atual
-    item_data = db.items.find_one({"id": item_id}, {"_id": 0})
+    item_data = db.items.find_one({"_id": item_id})
     if not item_data:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -111,9 +110,9 @@ def view_item_contents(item_id: str):
     
     # D. Busca o nome do proprietário, se houver
     owner_name = None
-    proprietario_cpf = item_data.get("proprietario_cpf")
-    if proprietario_cpf:
-        owner = db.owners.find_one({"cpf": proprietario_cpf}, {"_id": 0, "nome": 1})
+    owner_id = item_data.get("owner_id")
+    if owner_id:
+        owner = db.owners.find_one({"_id": owner_id}, {"_id": 0, "nome": 1})
         if owner:
             owner_name = owner["nome"]
     
@@ -133,13 +132,13 @@ def move_item(item_id: str, new_container_id: str):
     Move um item mudando apenas o 'container_id' dele.
     """
     # Verifica se o container destino existe
-    destino = db.containers.find_one({"id": new_container_id})
+    destino = db.containers.find_one({"_id": new_container_id})
     if not destino:
         raise HTTPException(status_code=404, detail="Container destino não existe")
 
     # Atualiza o item
     result = db.items.update_one(
-        {"id": item_id},
+        {"_id": item_id},
         {"$set": {"container_id": new_container_id}}
     )
     
@@ -155,7 +154,7 @@ def get_roots():
     """
     Retorna apenas os containers principais (que não têm pai).
     """
-    return list(db.containers.find({"parent_id": None}, {"_id": 0}))
+    return list(db.containers.find({"parent_id": None}))
 
 # --- ROTAS ---
 

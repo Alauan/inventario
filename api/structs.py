@@ -8,23 +8,23 @@ def generate_id():
 
 # --- 1. ITEM (A Folha) ---
 class Item(BaseModel):
-    id: str = Field(default_factory=generate_id)
+    id: str = Field(default_factory=generate_id, alias="_id")
     nome: str
     descricao: Optional[str] = None
     
     container_id: Optional[str] = None 
     original_container_id: Optional[str] = None
-    proprietario_cpf: Optional[str] = None
+    owner_id: Optional[str] = None
 
 # --- 2. CONTAINER (O Nó) ---
 class Container(BaseModel):
-    id: str = Field(default_factory=generate_id)
+    id: str = Field(default_factory=generate_id, alias="_id")
     nome: str
-    
     parent_id: Optional[str] = None
     
 
 class Owner(BaseModel):
+    id: str = Field(default_factory=generate_id, alias="_id")
     cpf: str
     nome: str
 
