@@ -99,30 +99,30 @@
 
         <!-- Seção de Itens Fora do Lugar -->
         {% if container_view.owned_items %}
-                <span class="label" style="color: #d32f2f; margin-top: 30px;">Fora do Lugar: </span>
-                <div class="list-group">
-                    {% for item in container_view.owned_items %}
-                        <div class="list-item lent-item">
-                            <div>
-                                <span class="type-badge">Item</span>
-                                <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
-                            </div>
-                            <div style="text-align: right;">
-                                <div class="breadcrumb" style="margin: 0;">
-                                    {% if item.path %}
-                                        {% for crumb in item.path %}
-                                            <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
-                                            {% if not loop.last %} &gt; {% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        <span style="color: #999;">Desconhecido</span>
-                                    {% endif %}
-                                </div>
+            <span class="label" style="color: #d32f2f; margin-top: 30px;">Fora do Lugar: </span>
+            <div class="list-group">
+                {% for item in container_view.owned_items %}
+                    <div class="list-item lent-item">
+                        <div>
+                            <span class="type-badge">Item</span>
+                            <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="breadcrumb" style="margin: 0;">
+                                {% if item.path %}
+                                    {% for crumb in item.path %}
+                                        <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
+                                        {% if not loop.last %} &gt; {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span style="color: #999;">Desconhecido</span>
+                                {% endif %}
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+            
         {% endif %}
 
         <div class="actions">
