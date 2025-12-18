@@ -34,7 +34,7 @@ async def pagina_inicial(request: Request):
         request.session.clear()
         return RedirectResponse(url="/auth/login", status_code=303)
 
-    return RedirectResponse(url=f"/view/any/{owner_id}", status_code=303)
+    return RedirectResponse(url=f"/view/any/home", status_code=303)
 
 
 

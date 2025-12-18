@@ -5,6 +5,7 @@ async def verificar_login_global(request: Request):
     # Lista de rotas que são PÚBLICAS (não precisam de login)
     rotas_publicas = [
         "/auth/login"       # A página de login
+        "/favicon.ico"    # O ícone do site
     ]
     
     # Se a rota atual for pública, deixa passar
@@ -15,7 +16,12 @@ async def verificar_login_global(request: Request):
     usuario = request.session.get("usuario_logado")
     
     if not usuario:
-        raise HTTPException(status_code=303, headers={"Location": "/auth/login"})
+        caminho_original = request.url.path
+        
+        raise HTTPException(
+            status_code=303, 
+            headers={"Location": f"/auth/login?proximo_passo={caminho_original}"}
+        )
     
 
 def get_breadcrumbs(container_id: str) -> list:

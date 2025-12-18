@@ -99,6 +99,13 @@ def view_owner_contents(owner_id: str):
 
 @router.get("/any/{codigo}", response_class=HTMLResponse)
 async def ler_qr_code(request: Request, codigo: str):
+    if codigo == "home":
+        owner_id = request.session.get("usuario_logado")
+        if not owner_id:
+            return RedirectResponse(url="/auth/login", status_code=303)
+        data = view_owner_contents(owner_id)
+        return templates.TemplateResponse("owner.html", {"request": request, "owner_view": data})
+
     # 1. Tenta achar como ITEM
     item_check = get_db().items.find_one({"_id": codigo})
     if item_check:
