@@ -105,16 +105,16 @@ def view_owner_contents(owner_id: str):
     owned_objects = []
     in_place_objects = []
     for object_dict in owned_objects_raw:
-        path = get_breadcrumbs(object_dict.get("container_id"))
+        path = get_breadcrumbs(object_dict.get("parent_id"))
             
-        is_out_of_place = (object_dict.get("container_id") != object_dict.get("original_container_id"))
+        is_out_of_place = (object_dict.get("parent_id") != object_dict.get("original_parent_id"))
         
         item_obj = Object(**object_dict)
         
         enriched_item = EnrichedObject(
             info=item_obj,
             path=path,
-            original_path=get_breadcrumbs(object_dict.get("original_container_id")),
+            original_path=get_breadcrumbs(object_dict.get("original_parent_id")),
             is_out_of_place=is_out_of_place
         )
         

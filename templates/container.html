@@ -108,7 +108,6 @@
                 <span class="label" style="color: #d32f2f; margin-top: 30px;">Fora do Lugar: </span>
                 <div class="list-group">
                     {% for item in container_view.owned_items %}
-                        {% if item.is_out_of_place %}
                         <div class="list-item lent-item">
                             <div>
                                 <span class="type-badge">Item</span>
@@ -127,7 +126,6 @@
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
                     {% endfor %}
                 </div>
             {% endif %}
