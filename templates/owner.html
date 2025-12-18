@@ -89,7 +89,7 @@
             {% endif %}
 
             {% for item in owner_view.owned_items %}
-            <div class="item-row {{ 'lent-item' if item.is_lent else '' }}">
+            <div class="item-row {{ 'lent-item' if item.is_out_of_place else '' }}">
                 <div>
                     <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
                     {% if item.is_out_of_place %}

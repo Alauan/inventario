@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from ..database import get_db, templates
-from ..structs import ContainerView, ItemView, OwnerView, EnrichedItem
+from ..structs import ContainerView, ItemView, OwnerView, EnrichedItem, Item, Owner
 from ..utils import get_breadcrumbs
 
 router = APIRouter(
@@ -76,24 +76,44 @@ def view_owner_contents(owner_id: str):
     # B. Itens que estão FISICAMENTE com o owner
     held_items_raw = list(get_db().items.find({"container_id": owner_id}))
     held_items = []
-    for item in held_items_raw:
+    for item_dict in held_items_raw:
         path = [{"_id": owner_data["_id"], "name": owner_data["name"]}]
-        item_view = ItemView(**item, container_path=path, original_container_path=get_breadcrumbs(item.get("original_container_id")), owner_name=owner_data["name"])
+        
+        item_obj = Item(**item_dict)
+        
+        item_view = ItemView(
+            info=item_obj,
+            container_path=path,
+            original_container_path=get_breadcrumbs(item_dict.get("original_container_id")),
+            owner_name=owner_data["name"]
+        )
         held_items.append(item_view)
     
     # C. Itens que PERTENCEM ao owner (com dados extras)
     owned_items_raw = list(get_db().items.find({"owner_id": owner_id}))
     owned_items = []
     in_place_items = []
-    for item in owned_items_raw:
-        owner_lent = get_db().owners.find_one({"_id": item.get("container_id")})
+    for item_dict in owned_items_raw:
+        owner_lent = get_db().owners.find_one({"_id": item_dict.get("container_id")})
         is_lent = (owner_lent is not None)
         if is_lent:
             path = [{"_id": owner_lent["_id"], "name": owner_lent["name"]}]
         else:
-            path = get_breadcrumbs(item.get("container_id"))
-        is_out_of_place = (item.get("container_id") != item.get("original_container_id"))
-        enriched_item = EnrichedItem(**item, container_path=path, is_out_of_place=is_out_of_place, is_lent=is_lent)
+            path = get_breadcrumbs(item_dict.get("container_id"))
+            
+        is_out_of_place = (item_dict.get("container_id") != item_dict.get("original_container_id"))
+        
+        item_obj = Item(**item_dict)
+        
+        enriched_item = EnrichedItem(
+            info=item_obj,
+            container_path=path,
+            original_container_path=get_breadcrumbs(item_dict.get("original_container_id")),
+            owner_name=owner_data["name"],
+            is_out_of_place=is_out_of_place,
+            is_lent=is_lent
+        )
+        
         if is_out_of_place:
             owned_items.append(enriched_item)
         else:
@@ -102,13 +122,14 @@ def view_owner_contents(owner_id: str):
     owned_items.extend(in_place_items)
     # D. Containers raiz (sem pai)
     root_containers = list(get_db().containers.find({"parent_id": None}))
+    
     # E. Monta o pacote de resposta
-    return {
-        "info": owner_data,
-        "held_items": held_items,
-        "owned_items": owned_items,
-        "root_containers": root_containers
-    }
+    return OwnerView(
+        info=Owner(**owner_data),
+        held_items=held_items,
+        owned_items=owned_items,
+        root_containers=root_containers
+    )
 
 
 @router.get("/any/{codigo}", response_class=HTMLResponse)
