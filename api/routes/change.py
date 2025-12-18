@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse
-from ..database import db
+from ..database import get_db
 from ..structs import Container, Item, Owner
 
 
@@ -12,17 +12,17 @@ router = APIRouter(
 
 @router.post("/create/container")
 def create_container(container: Container):
-    db.containers.insert_one(container.model_dump(by_alias=True))
+    get_db().containers.insert_one(container.model_dump(by_alias=True))
     return {"status": "criado", "id": container.id}
 
 @router.post("/create/item")
 def create_item(item: Item):
-    db.items.insert_one(item.model_dump(by_alias=True))
+    get_db().items.insert_one(item.model_dump(by_alias=True))
     return {"status": "criado", "id": item.id}
 
 @router.post("/create/owner")
 def create_owner(owner: Owner):
-    db.owners.insert_one(owner.model_dump(by_alias=True))
+    get_db().owners.insert_one(owner.model_dump(by_alias=True))
     return {"status": "criado", "id": owner.id}
 
 
@@ -47,7 +47,7 @@ async def web_create_item(
     )
     
     # 2. Salva no banco
-    db.items.insert_one(novo_item.model_dump(by_alias=True))
+    get_db().items.insert_one(novo_item.model_dump(by_alias=True))
     
     # 3. Redireciona de volta para a visualização do container
     return RedirectResponse(url=f"/access/{container_id}", status_code=303)
@@ -59,12 +59,12 @@ def move_item(item_id: str, new_container_id: str):
     Move um item mudando apenas o 'container_id' dele.
     """
     # Verifica se o container destino existe
-    destino = db.containers.find_one({"_id": new_container_id})
+    destino = get_db().containers.find_one({"_id": new_container_id})
     if not destino:
         raise HTTPException(status_code=404, detail="Container destino não existe")
 
     # Atualiza o item
-    result = db.items.update_one(
+    result = get_db().items.update_one(
         {"_id": item_id},
         {"$set": {"container_id": new_container_id}}
     )
@@ -80,7 +80,7 @@ def return_item_to_original(item_id: str):
     Retorna um item para seu container original.
     """
     # Busca o item
-    item = db.items.find_one({"_id": item_id})
+    item = get_db().items.find_one({"_id": item_id})
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -89,7 +89,7 @@ def return_item_to_original(item_id: str):
         raise HTTPException(status_code=400, detail="Item não tem container original definido")
     
     # Atualiza o item para voltar ao container original
-    result = db.items.update_one(
+    result = get_db().items.update_one(
         {"_id": item_id},
         {"$set": {"container_id": original_container_id}}
     )

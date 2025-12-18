@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
-from ..database import db, templates
+from ..database import get_db, templates
 from ..structs import ContainerView, ItemView, OwnerView, EnrichedItem
 from ..utils import get_breadcrumbs
 
@@ -17,14 +17,14 @@ router = APIRouter(
 def view_container_contents(container_id: str):
     
     # A. Busca os dados do container atual
-    container_data = db.containers.find_one({"_id": container_id})
+    container_data = get_db().containers.find_one({"_id": container_id})
     if not container_data:
         raise HTTPException(status_code=404, detail="Container não encontrado")
     
     # B. Busca QUEM ESTÁ DENTRO (Filhos imediatos)
     # Isso é muito rápido porque o MongoDB indexa o campo 'parent_id' e 'container_id'
-    subcontainers = list(db.containers.find({"parent_id": container_id}))
-    items = list(db.items.find({"container_id": container_id}))
+    subcontainers = list(get_db().containers.find({"parent_id": container_id}))
+    items = list(get_db().items.find({"container_id": container_id}))
     
     # C. Gera o caminho (Breadcrumbs) para o usuário saber onde está
     breadcrumbs = get_breadcrumbs(container_id)
@@ -40,7 +40,7 @@ def view_container_contents(container_id: str):
 @router.get(path="/item/{item_id}", response_model=ItemView)
 def view_item_contents(item_id: str):
     # A. Busca os dados do item atual
-    item_data = db.items.find_one({"_id": item_id})
+    item_data = get_db().items.find_one({"_id": item_id})
     if not item_data:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -54,7 +54,7 @@ def view_item_contents(item_id: str):
     owner_name = None
     owner_id = item_data.get("owner_id")
     if owner_id:
-        owner = db.owners.find_one({"_id": owner_id}, {"_id": 0, "nome": 1})
+        owner = get_db().owners.find_one({"_id": owner_id}, {"_id": 0, "nome": 1})
         if owner:
             owner_name = owner["nome"]
     
@@ -69,15 +69,15 @@ def view_item_contents(item_id: str):
 @router.get("/owner/{owner_id}", response_model=OwnerView)
 def view_owner_contents(owner_id: str):
     # A. Busca os dados do owner atual
-    owner_data = db.owners.find_one({"_id": owner_id})
+    owner_data = get_db().owners.find_one({"_id": owner_id})
     if not owner_data:
         raise HTTPException(status_code=404, detail="Owner não encontrado")
     
     # B. Itens que estão FISICAMENTE com o owner
-    held_items = list(db.items.find({"container_id": owner_id}))
+    held_items = list(get_db().items.find({"container_id": owner_id}))
     
     # C. Itens que PERTENCEM ao owner (com dados extras)
-    owned_items_raw = list(db.items.find({"owner_id": owner_id}))
+    owned_items_raw = list(get_db().items.find({"owner_id": owner_id}))
     owned_items = []
     for item in owned_items_raw:
         enriched_item = EnrichedItem(**item)
@@ -86,7 +86,7 @@ def view_owner_contents(owner_id: str):
         enriched_item.is_lent = (item.get("container_id") != item.get("original_container_id"))
         owned_items.append(enriched_item)
     # D. Containers raiz (sem pai)
-    root_containers = list(db.containers.find({"parent_id": None}))
+    root_containers = list(get_db().containers.find({"parent_id": None}))
     # E. Monta o pacote de resposta
     return {
         "info": owner_data,
@@ -100,20 +100,20 @@ def view_owner_contents(owner_id: str):
 @router.get("/any/{codigo}", response_class=HTMLResponse)
 async def ler_qr_code(request: Request, codigo: str):
     # 1. Tenta achar como ITEM
-    item_check = db.items.find_one({"_id": codigo})
+    item_check = get_db().items.find_one({"_id": codigo})
     if item_check:
         # Reutiliza a lógica de visualização de item
         data = view_item_contents(codigo)
         return templates.TemplateResponse("item.html", {"request": request, "item_view": data})
 
     # 2. Tenta achar como CONTAINER
-    container_check = db.containers.find_one({"_id": codigo})
+    container_check = get_db().containers.find_one({"_id": codigo})
     if container_check:
         # Reutiliza a lógica de visualização de container
         data = view_container_contents(codigo)
         return templates.TemplateResponse("container.html", {"request": request, "container_view": data})
 
-    owner_check = db.owners.find_one({"_id": codigo})
+    owner_check = get_db().owners.find_one({"_id": codigo})
     if owner_check:
         # Reutiliza a lógica de visualização de owner
         data = view_owner_contents(codigo)

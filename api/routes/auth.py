@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware # cookies autenticados
 import os
 from ..structs import Container, Item, ContainerView, ItemView, Owner
-from ..database import db, templates
+from ..database import get_db, templates
 from fastapi import APIRouter, Request
 
 router = APIRouter(
@@ -27,18 +27,18 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
         )
     
     # Verifica se o usuário já existe pelo CPF
-    usuario = db.owners.find_one({"cpf": cpf_usuario})
+    usuario = get_db().owners.find_one({"cpf": cpf_usuario})
     
     if usuario:
         # Atualiza o nome se o CPF já existe
-        db.owners.update_one(
+        get_db().owners.update_one(
             {"cpf": cpf_usuario},
             {"$set": {"name": nome_usuario}}
         )
     else:
         # Cria um novo usuário se o CPF não existe
         usuario_novo = Owner(name=nome_usuario, cpf=cpf_usuario)
-        db.owners.insert_one(usuario_novo.model_dump(by_alias=True))
+        get_db().owners.insert_one(usuario_novo.model_dump(by_alias=True))
         usuario = usuario_novo.model_dump()
 
     url_destino = f"/access/{proximo_passo}"
