@@ -98,3 +98,115 @@ def return_item_to_original(item_id: str):
         raise HTTPException(status_code=400, detail="Item já está no container original")
         
     return {"status": "retornado", "container_original": original_container_id}
+
+@router.put("/item/{item_id}/lend")
+def lend_item(request: Request, item_id: str):
+    """
+    Empréstimo de um item: move o item para o container do usuário logado.
+    """
+    # Busca o container do usuário logado
+    user_id = request.session.get("usuario_logado")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Usuário não autenticado")
+    
+    # Atualiza o item para o container do usuário
+    result = get_db().items.update_one(
+        {"_id": item_id},
+        {"$set": {"container_id": user_id}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Item não encontrado ou já está com o usuário")
+    return {"status": "emprestado", "novo_container": user_id}
+    
+
+@router.delete("/item/{item_id}/delete")
+def delete_item(item_id: str):
+    """
+    Deleta um item do inventário.
+    """
+    result = get_db().items.delete_one({"_id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    
+    return {"status": "deletado", "id": item_id}
+
+
+@router.post("/container/form/create")
+async def web_create_container(
+    request: Request,
+    name: str = Form(...),
+    parent_id: str = Form(None)):
+    """
+    Cria um container via formulário Web.
+    """
+    # 1. Cria o objeto Container
+    novo_container = Container(
+        name=name,
+        parent_id=parent_id
+    )
+    
+    # 2. Salva no banco
+    get_db().containers.insert_one(novo_container.model_dump(by_alias=True))
+    
+    # 3. Redireciona de volta para a visualização do container pai ou raiz
+    destino = parent_id if parent_id else "home"
+    return RedirectResponse(url=f"/view/any/{destino}", status_code=303)
+
+@router.delete("/container/{container_id}/delete_recursive")
+def delete_container_recursive(container_id: str):
+    """
+    Deleta um container e todos os seus itens e subcontainers recursivamente.
+    """
+    db = get_db()
+    
+    # Função recursiva para deletar containers e seus conteúdos
+    def deletar_recursivamente(cid: str):
+        # Deleta todos os itens dentro deste container
+        db.items.delete_many({"container_id": cid})
+        
+        # Encontra subcontainers
+        subcontainers = db.containers.find({"parent_id": cid})
+        for sub in subcontainers:
+            deletar_recursivamente(sub["_id"])
+        
+        # Deleta o container atual
+        db.containers.delete_one({"_id": cid})
+    
+    # Inicia a deleção recursiva
+    deletar_recursivamente(container_id)
+    
+    return {"status": "deletado_recursivamente", "id": container_id}
+
+@router.delete("/container/{container_id}/delete")
+def delete_container(container_id: str):
+    """
+    Deleta um container e coloca todos os seus itens e subcontainers no container pai.
+    """
+    db = get_db()
+    
+    # Busca o container alvo
+    container = db.containers.find_one({"_id": container_id})
+    if not container:
+        raise HTTPException(status_code=404, detail="Container não encontrado")
+    
+    parent_id = container.get("parent_id")
+    
+    # Move itens para o container pai (ou raiz se não houver pai)
+    db.items.update_many(
+        {"container_id": container_id},
+        {"$set": {"container_id": parent_id}}
+    )
+    
+    # Move subcontainers para o container pai (ou raiz se não houver pai)
+    db.containers.update_many(
+        {"parent_id": container_id},
+        {"$set": {"parent_id": parent_id}}
+    )
+    
+    # Deleta o container alvo
+    db.containers.delete_one({"_id": container_id})
+    
+    return {"status": "deletado", "id": container_id}
+
+

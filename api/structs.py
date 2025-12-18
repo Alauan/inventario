@@ -44,15 +44,15 @@ class ItemView(BaseModel):
     original_container_path: List[dict]
     owner_name: Optional[str] = None
 
-class EnrichedItem(Item):       # Somente para visualização
+class EnrichedItem(ItemView):       # Somente para visualização
     """
     Herda de Item, mas adiciona campos calculados apenas para visualização
     """
-    path: List[dict] # Breadcrumbs do container onde o item está
-    is_lent: bool = False # Se está emprestado/fora do lugar
+    is_out_of_place: bool = False # Se está fora do container original
+    is_lent: bool = False # Se está emprestado
 
 class OwnerView(BaseModel):
     info: Owner
-    held_items: List[Item]          # Itens que estão FISICAMENTE com o owner
+    held_items: List[ItemView]          # Itens que estão FISICAMENTE com o owner
     owned_items: List[EnrichedItem] # Itens que PERTENCEM ao owner (com dados extras)
     root_containers: List[Container]

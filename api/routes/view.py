@@ -74,16 +74,32 @@ def view_owner_contents(owner_id: str):
         raise HTTPException(status_code=404, detail="Owner não encontrado")
     
     # B. Itens que estão FISICAMENTE com o owner
-    held_items = list(get_db().items.find({"container_id": owner_id}))
+    held_items_raw = list(get_db().items.find({"container_id": owner_id}))
+    held_items = []
+    for item in held_items_raw:
+        path = [{"_id": owner_data["_id"], "name": owner_data["name"]}]
+        item_view = ItemView(**item, container_path=path, original_container_path=get_breadcrumbs(item.get("original_container_id")), owner_name=owner_data["name"])
+        held_items.append(item_view)
     
     # C. Itens que PERTENCEM ao owner (com dados extras)
     owned_items_raw = list(get_db().items.find({"owner_id": owner_id}))
     owned_items = []
+    in_place_items = []
     for item in owned_items_raw:
-        path = get_breadcrumbs(item.get("container_id"))
-        is_lent = (item.get("container_id") != item.get("original_container_id"))
-        enriched_item = EnrichedItem(**item, path=path, is_lent=is_lent)
-        owned_items.append(enriched_item)
+        owner_lent = get_db().owners.find_one({"_id": item.get("container_id")})
+        is_lent = (owner_lent is not None)
+        if is_lent:
+            path = [{"_id": owner_lent["_id"], "name": owner_lent["name"]}]
+        else:
+            path = get_breadcrumbs(item.get("container_id"))
+        is_out_of_place = (item.get("container_id") != item.get("original_container_id"))
+        enriched_item = EnrichedItem(**item, container_path=path, is_out_of_place=is_out_of_place, is_lent=is_lent)
+        if is_out_of_place:
+            owned_items.append(enriched_item)
+        else:
+            in_place_items.append(enriched_item)
+
+    owned_items.extend(in_place_items)
     # D. Containers raiz (sem pai)
     root_containers = list(get_db().containers.find({"parent_id": None}))
     # E. Monta o pacote de resposta
@@ -93,7 +109,6 @@ def view_owner_contents(owner_id: str):
         "owned_items": owned_items,
         "root_containers": root_containers
     }
-
 
 
 @router.get("/any/{codigo}", response_class=HTMLResponse)

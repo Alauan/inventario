@@ -9,9 +9,11 @@
         .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 800px; margin: 0 auto; }
         h1 { margin-top: 0; }
         .label { font-weight: bold; display: block; margin-top: 10px; }
-        .breadcrumb { color: #555; font-size: 0.9em; margin-bottom: 15px; }
-        .breadcrumb span::after { content: " > "; }
-        .breadcrumb span:last-child::after { content: ""; }
+        
+        /* Breadcrumb atualizado estilo owner.html */
+        .breadcrumb { margin-bottom: 15px; }
+        .location-tag { font-size: 0.85em; background: #eee; padding: 4px 8px; border-radius: 4px; color: #555; display: inline-block; }
+        .location-tag a { text-decoration: none; color: inherit; }
         
         .list-group { margin-top: 10px; border: 1px solid #eee; border-radius: 4px; }
         .list-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -22,6 +24,8 @@
         .actions { margin-top: 20px; display: flex; justify-content: space-between; align-items: center; }
         .btn-primary { background-color: #0070f3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; font-size: 14px; }
         .btn-secondary { color: #666; text-decoration: none; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8em; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; margin-left: 10px; }
+        .btn-sm:hover { background: #f0f0f0; }
 
         /* Estilos do Modal (Dialog) */
         dialog { border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 20px; width: 90%; max-width: 400px; }
@@ -39,17 +43,22 @@
         <div class="breadcrumb">
             {% if container_view.path %}
                 {% for crumb in container_view.path %}
-                    <span><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
+                    <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
+                    <span style="color: #999; margin: 0 5px;">&gt;</span>
                 {% endfor %}
             {% else %}
-                <span>Raiz</span>
+                <span class="location-tag">Raiz</span>
+                <span style="color: #999; margin: 0 5px;">&gt;</span>
             {% endif %}
-            <span>{{ container_view.info.name }}</span>
+            <span class="location-tag" style="background: #e0efff; color: #0070f3; font-weight: bold;">{{ container_view.info.name }}</span>
         </div>
 
-        <div style="margin: 20px 0;">
+        <div style="margin: 20px 0; display: flex; gap: 10px;">
             <button class="btn-primary" onclick="document.getElementById('modalItem').showModal()">
                 + Adicionar Item Aqui
+            </button>
+            <button class="btn-primary" style="background-color: #28a745;" onclick="document.getElementById('modalSubcontainer').showModal()">
+                + Adicionar Subcontainer
             </button>
         </div>
 
@@ -66,6 +75,9 @@
                     <span class="type-badge">Container</span>
                     <a href="/view/any/{{ sub._id }}">{{ sub.name }}</a>
                 </div>
+                <form action="/change/{{ sub._id }}/lend" method="POST" style="margin: 0;">
+                    <button type="submit" class="btn-sm">Emprestar</button>
+                </form>
             </div>
             {% endfor %}
 
@@ -75,8 +87,13 @@
                     <span class="type-badge">Item</span>
                     <a href="/view/any/{{ item._id }}">{{ item.name }}</a>
                 </div>
-                <div style="font-size: 0.85em; color: #666;">
-                    {{ item.description or "" }}
+                <div style="display: flex; align-items: center;">
+                    <div style="font-size: 0.85em; color: #666;">
+                        {{ item.description or "" }}
+                    </div>
+                    <form action="/change/{{ item._id }}/lend" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn-sm">Emprestar</button>
+                    </form>
                 </div>
             </div>
             {% endfor %}
@@ -103,6 +120,23 @@
             <div class="form-actions">
                 <button type="button" class="btn-cancel" onclick="document.getElementById('modalItem').close()">Cancelar</button>
                 <button type="submit" class="btn-primary">Criar Item</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="modalSubcontainer">
+        <h3 style="margin-top: 0;">Novo Subcontainer</h3>
+        <p style="font-size: 0.9em; color: #666;">Dentro de: <strong>{{ container_view.info.name }}</strong></p>
+        
+        <form action="/change/form/create/container" method="POST">
+            <input type="hidden" name="parent_id" value="{{ container_view.info._id }}">
+            
+            <label for="sub_name">Nome do Container</label>
+            <input type="text" id="sub_name" name="name" placeholder="Ex: Caixa de Ferramentas" required>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modalSubcontainer').close()">Cancelar</button>
+                <button type="submit" class="btn-primary">Criar</button>
             </div>
         </form>
     </dialog>
