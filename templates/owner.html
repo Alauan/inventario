@@ -43,7 +43,7 @@
     <div class="header">
         <div>
             <span style="font-size: 0.9em; color: #666;">Proprietário</span>
-            <h1 style="margin: 0;">{{ owner_view.info.nome }}</h1>
+            <h1 style="margin: 0;">{{ owner_view.info.name }}</h1>
         </div>
         
     </div>
@@ -58,11 +58,11 @@
             {% for item in owner_view.held_items %}
             <div class="item-row">
                 <div>
-                    <a href="/view/any/{{ item.id }}">{{ item.name }}</a>
-                    <div style="font-size: 0.8em; color: #666;">{{ item.description or "" }}</div>
+                    <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
+                    <div style="font-size: 0.8em; color: #666;">{{ item.info.description or "" }}</div>
                 </div>
                 
-                <form action="/change/item/{{ item.id }}/return" method="POST" style="margin: 0;">
+                <form action="/change/item/{{ item.info.id }}/return" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-return" title="Devolver ao container original">
                         ↺ Devolver
                         {% if item.original_container_path %}
@@ -91,7 +91,7 @@
             {% for item in owner_view.owned_items %}
             <div class="item-row {{ 'lent-item' if item.is_lent else '' }}">
                 <div>
-                    <a href="/view/any/{{ item.id }}">{{ item.name }}</a>
+                    <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
                     {% if item.is_out_of_place %}
                         <span style="font-size: 0.8em; color: #d32f2f; margin-left: 5px;">(Fora do lugar)</span>
                     {% endif %}
