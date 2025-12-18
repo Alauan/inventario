@@ -99,12 +99,6 @@
 
         <!-- Seção de Itens Fora do Lugar -->
         {% if container_view.owned_items %}
-            {% set ns = namespace(has_missing=false) %}
-            {% for item in container_view.owned_items %}
-                {% if item.is_out_of_place %}{% set ns.has_missing = true %}{% endif %}
-            {% endfor %}
-
-            {% if ns.has_missing %}
                 <span class="label" style="color: #d32f2f; margin-top: 30px;">Fora do Lugar: </span>
                 <div class="list-group">
                     {% for item in container_view.owned_items %}
