@@ -73,7 +73,7 @@
                     <span class="type-badge">Container</span>
                     <a href="/view/any/{{ sub.id }}">{{ sub.name }}</a>
                 </div>
-                <form action="/change/{{ sub.id }}/lend" method="POST" style="margin: 0;">
+                <form action="/change/{{ sub.id }}/lend?next={{ request.path }}" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-sm">Emprestar</button>
                 </form>
             </div>

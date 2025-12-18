@@ -76,7 +76,7 @@ def move_item(item_id: str, new_container_id: str):
     return {"status": "movido", "novo_local": new_container_id}
 
 @router.post("/item/{item_id}/return")
-def return_item_to_original(item_id: str):
+def return_item_to_original(item_id: str, next: str = "/view/any/home"):
     """
     Retorna um item para seu container original.
     """
@@ -94,11 +94,11 @@ def return_item_to_original(item_id: str):
         {"_id": item_id},
         {"$set": {"parent_id": original_parent_id}}
     )
-        
-    return {"status": "retornado", "container_original": original_parent_id}
+    
+    return RedirectResponse(url=next, status_code=303)
 
 @router.post("/item/{item_id}/lend")
-def lend_item(request: Request, item_id: str):
+def lend_item(request: Request, item_id: str, next: str = "/view/any/home"):
     """
     Empréstimo de um item: move o item para a mão do usuário logado.
     """
@@ -115,7 +115,7 @@ def lend_item(request: Request, item_id: str):
     
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="Item não encontrado ou já está com o usuário")
-    return {"status": "emprestado", "novo_container": user_id}
+    return RedirectResponse(url=next, status_code=303)
     
 
 @router.delete("/item/{item_id}/delete")
