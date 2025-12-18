@@ -16,12 +16,7 @@ async def verificar_login_global(request: Request):
     usuario = request.session.get("usuario_logado")
     
     if not usuario:
-        caminho_original = request.url.path
-        
-        raise HTTPException(
-            status_code=303, 
-            headers={"Location": f"/auth/login?proximo_passo={caminho_original}"}
-        )
+        raise HTTPException(status_code=303, headers={"Location": "/auth/login"})
     
 
 def get_breadcrumbs(container_id: str) -> list:

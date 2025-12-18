@@ -41,11 +41,7 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
         get_db().owners.insert_one(usuario_novo.model_dump(by_alias=True))
         usuario = usuario_novo.model_dump()
 
-    if proximo_passo and proximo_passo.startswith("/"):
-        url_destino = proximo_passo
-    else:
-        destino = proximo_passo if proximo_passo else "home"
-        url_destino = f"/view/any/{destino}"
+    url_destino = f"/view/any/{proximo_passo}"
     response = RedirectResponse(url=url_destino, status_code=303)
     
     request.session["usuario_logado"] = usuario["_id"]
@@ -53,12 +49,8 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
     return response
 
 @router.get("/login", response_class=HTMLResponse)
-def pagina_login(request: Request, proximo_passo: str = "home"):
+def pagina_login(request: Request):
     return templates.TemplateResponse(
         "login.html", 
-        context={
-            "request": request, 
-            "codigo_alvo": proximo_passo, # Passa o valor recebido para o HTML
-            "erro": None
-        }
+        context={"request": request, "codigo_alvo": "home", "erro": None}
     )
