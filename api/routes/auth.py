@@ -41,7 +41,7 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
         get_db().owners.insert_one(usuario_novo.model_dump(by_alias=True))
         usuario = usuario_novo.model_dump()
 
-    url_destino = f"/access/{proximo_passo}"
+    url_destino = f"/view/any/{proximo_passo}"
     response = RedirectResponse(url=url_destino, status_code=303)
     
     request.session["usuario_logado"] = usuario["_id"]
