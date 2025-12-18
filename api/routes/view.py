@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from ..database import get_db, templates
-from ..structs import ContainerView, ItemView, OwnerView, EnrichedObject, Owner, Object
+from ..structs import ContainerView, ItemView, OwnerView, EnrichedObject, Owner, Object, ObjectType
 from ..utils import get_breadcrumbs, enrich_object
 
 router = APIRouter(
@@ -15,32 +15,24 @@ router = APIRouter(
 # É aqui que seu App vai chamar quando ler o QR Code ou clicar numa pasta.
 @router.get("/container/{container_id}", response_model=ContainerView)
 def view_container_contents(request: Request, container_id: str):
-    container_data = get_db().containers.find_one({"_id": container_id})
+    container_data = get_db().objects.find_one({"_id": container_id})
     if not container_data:
         raise HTTPException(status_code=404, detail="Container não encontrado")
     
-    all_subcontainers = list(get_db().containers.find({
+    all_objects = list(get_db().objects.find({
         "$or": [
             {"parent_id": container_id},
             {"original_parent_id": container_id}
         ]
     }))
 
-    all_items = list(get_db().items.find({
-        "$or": [
-            {"parent_id": container_id},
-            {"original_parent_id": container_id}
-        ]
-    }))
+    items = [item for item in all_objects if item.get("parent_id") == container_id and item.get("type") == "item"]
+    subcontainers = [cont for cont in all_objects if cont.get("parent_id") == container_id and cont.get("type") == "container"]
 
-    items = [item for item in all_items if item.get("parent_id") == container_id]
-    subcontainers = [cont for cont in all_subcontainers if cont.get("parent_id") == container_id]
-
-    owned_items = [enrich_object(Object(**item)) for item in all_items if item.get("original_parent_id") == container_id and item.get("parent_id") != container_id]
-    owned_subcontainers = [enrich_object(Object(**cont)) for cont in all_subcontainers if cont.get("original_parent_id") == container_id and cont.get("parent_id") != container_id]
-
+    owned_items = [enrich_object(Object(**item)) for item in all_objects if item.get("original_parent_id") == container_id and item.get("parent_id") != container_id and item.get("type") == "item"]
+    owned_subcontainers = [enrich_object(Object(**cont)) for cont in all_objects if cont.get("original_parent_id") == container_id and cont.get("parent_id") != container_id and cont.get("type") == "container"]
     owner_id = request.session.get("usuario_logado")
-    held_objects = list(get_db().items.find({"parent_id": owner_id}))
+    held_objects = list(get_db().objects.find({"parent_id": owner_id}))
     breadcrumbs = get_breadcrumbs(container_id)
 
     return ContainerView(
@@ -56,7 +48,7 @@ def view_container_contents(request: Request, container_id: str):
 @router.get(path="/item/{item_id}", response_model=ItemView)
 def view_item_contents(item_id: str):
     # A. Busca os dados do item atual
-    item_data = get_db().items.find_one({"_id": item_id})
+    item_data = get_db().objects.find_one({"_id": item_id})
     if not item_data:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
@@ -90,7 +82,7 @@ def view_owner_contents(owner_id: str):
         raise HTTPException(status_code=404, detail="Owner não encontrado")
     
     # B. Itens que estão FISICAMENTE com o owner
-    held_objects_raw = list(get_db().items.find({"parent_id": owner_id}))
+    held_objects_raw = list(get_db().objects.find({"parent_id": owner_id}))
     held_objects = []
     for object_dict in held_objects_raw:
         path = [{"_id": owner_data["_id"], "name": owner_data["name"]}]
@@ -104,31 +96,20 @@ def view_owner_contents(owner_id: str):
         held_objects.append(item_view)
     
     # C. Itens que PERTENCEM ao owner (com dados extras)
-    owned_objects_raw = list(get_db().items.find({"owner_id": owner_id}))
+    owned_objects_raw = list(get_db().objects.find({"owner_id": owner_id}))
     owned_objects = []
     in_place_objects = []
     for object_dict in owned_objects_raw:
-        path = get_breadcrumbs(object_dict.get("parent_id"))
-            
-        is_out_of_place = (object_dict.get("parent_id") != object_dict.get("original_parent_id"))
+        enriched_object = enrich_object(Object(**object_dict))
         
-        item_obj = Object(**object_dict)
-        
-        enriched_item = EnrichedObject(
-            info=item_obj,
-            path=path,
-            original_path=get_breadcrumbs(object_dict.get("original_parent_id")),
-            is_out_of_place=is_out_of_place
-        )
-        
-        if is_out_of_place:
-            owned_objects.append(enriched_item)
+        if enriched_object.is_out_of_place:
+            owned_objects.append(enriched_object)
         else:
-            in_place_objects.append(enriched_item)
+            in_place_objects.append(enriched_object)
 
     owned_objects.extend(in_place_objects)
     # D. Containers raiz (sem pai)
-    root_containers = list(get_db().containers.find({"parent_id": None}))
+    root_containers = list(get_db().objects.find({"parent_id": None}))
     
     # E. Monta o pacote de resposta
     return OwnerView(
@@ -141,6 +122,7 @@ def view_owner_contents(owner_id: str):
 
 @router.get("/any/{codigo}", response_class=HTMLResponse)
 async def ler_qr_code(request: Request, codigo: str):
+    # 1. Se for "home", redireciona para o owner logado
     if codigo == "home":
         owner_id = request.session.get("usuario_logado")
         if not owner_id:
@@ -148,20 +130,18 @@ async def ler_qr_code(request: Request, codigo: str):
         data = view_owner_contents(owner_id)
         return templates.TemplateResponse("owner.html", {"request": request, "owner_view": data})
 
-    # 1. Tenta achar como ITEM
-    item_check = get_db().items.find_one({"_id": codigo})
-    if item_check:
-        # Reutiliza a lógica de visualização de item
+    # 2. Tenta encontrar o código em objetos
+    object_check = get_db().objects.find_one({"_id": codigo})
+    if object_check:
+        obj = Object(**object_check)
+        if obj.type == ObjectType.CONTAINER:
+            data = view_container_contents(request, codigo)
+            return templates.TemplateResponse("container.html", {"request": request, "container_view": data})
+        
         data = view_item_contents(codigo)
         return templates.TemplateResponse("item.html", {"request": request, "item_view": data})
 
-    # 2. Tenta achar como CONTAINER
-    container_check = get_db().containers.find_one({"_id": codigo})
-    if container_check:
-        # Reutiliza a lógica de visualização de container
-        data = view_container_contents(request, codigo)
-        return templates.TemplateResponse("container.html", {"request": request, "container_view": data})
-
+    # 3. Tenta encontrar o código em owners
     owner_check = get_db().owners.find_one({"_id": codigo})
     if owner_check:
         # Reutiliza a lógica de visualização de owner
