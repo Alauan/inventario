@@ -43,7 +43,7 @@ async def web_create_item(
     )
     
     # 2. Salva no banco
-    get_db().items.insert_one(novo_item.model_dump(by_alias=True))
+    get_db().objects.insert_one(novo_item.model_dump(by_alias=True))
     
     # 3. Redireciona de volta para a visualização do container
     return RedirectResponse(url=f"/view/any/{container_id}", status_code=303)
