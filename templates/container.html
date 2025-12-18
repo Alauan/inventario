@@ -91,7 +91,7 @@
         <h3 style="margin-top: 0;">Novo Item</h3>
         <p style="font-size: 0.9em; color: #666;">Este item terá origem em: <strong>{{ container_view.info.name }}</strong></p>
         
-        <form action="/change/form/item" method="POST">
+        <form action="/change/form/create/item" method="POST">
             <input type="hidden" name="container_id" value="{{ container_view.info._id }}">
             
             <label for="name">Nome do Item</label>
