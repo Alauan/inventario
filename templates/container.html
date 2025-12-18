@@ -39,7 +39,7 @@
         <div class="breadcrumb">
             {% if container_view.path %}
                 {% for crumb in container_view.path %}
-                    <span><a href="/access/{{ crumb._id }}">{{ crumb.name }}</a></span>
+                    <span><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
                 {% endfor %}
             {% else %}
                 <span>Raiz</span>
@@ -64,16 +64,16 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Container</span>
-                    <a href="/access/{{ sub._id }}">{{ sub.name }}</a>
+                    <a href="/view/any/{{ sub._id }}">{{ sub.name }}</a>
                 </div>
             </div>
             {% endfor %}
 
-            {% for item in container_view['items'] %}
+            {% for item in container_view.items %}
             <div class="list-item">
                 <div>
                     <span class="type-badge">Item</span>
-                    <a href="/access/{{ item._id }}">{{ item.name }}</a>
+                    <a href="/view/any/{{ item._id }}">{{ item.name }}</a>
                 </div>
                 <div style="font-size: 0.85em; color: #666;">
                     {{ item.description or "" }}
