@@ -46,19 +46,16 @@
                     <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
                     <span style="color: #999; margin: 0 5px;">&gt;</span>
                 {% endfor %}
-            {% else %}
-                <span class="location-tag">Raiz</span>
-                <span style="color: #999; margin: 0 5px;">&gt;</span>
             {% endif %}
             <span class="location-tag" style="background: #e0efff; color: #0070f3; font-weight: bold;">{{ container_view.info.name }}</span>
         </div>
 
         <div style="margin: 20px 0; display: flex; gap: 10px;">
             <button class="btn-primary" onclick="document.getElementById('modalItem').showModal()">
-                + Adicionar Item Aqui
+                + Criar Item
             </button>
             <button class="btn-primary" style="background-color: #28a745;" onclick="document.getElementById('modalSubcontainer').showModal()">
-                + Adicionar Subcontainer
+                + Criar Subcontainer
             </button>
         </div>
 
@@ -91,7 +88,7 @@
                     <div style="font-size: 0.85em; color: #666;">
                         {{ item.description or "" }}
                     </div>
-                    <form action="/change/{{ item._id }}/lend" method="POST" style="margin: 0;">
+                    <form action="/change/item/{{ item._id }}/lend" method="POST" style="margin: 0;">
                         <button type="submit" class="btn-sm">Emprestar</button>
                     </form>
                 </div>
