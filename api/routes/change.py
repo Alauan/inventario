@@ -50,7 +50,7 @@ async def web_create_item(
 
 
 @router.post("/object/{object_id}/move")
-def move_item(object_id: str, new_container_id: str, next: str = "/view/any/home"):
+def move_item(object_id: str, new_container_id: str = Form(...), next: str = "/view/any/home"):
     """
     Move um objeto mudando apenas o 'container_id' dele.
     """
