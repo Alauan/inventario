@@ -1,5 +1,5 @@
 from fastapi import Request, HTTPException
-from .database import db
+from .database import get_db
 
 async def verificar_login_global(request: Request):
     # Lista de rotas que são PÚBLICAS (não precisam de login)
@@ -26,7 +26,7 @@ def get_breadcrumbs(container_id: str) -> list:
     for _ in range(10):
         if not atual_id:
             break
-        container = db.containers.find_one({"_id": atual_id})
+        container = get_db().containers.find_one({"_id": atual_id})
         if not container:
             break
         
