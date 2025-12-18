@@ -60,6 +60,24 @@
             </button>
         </div>
 
+        {% if container_view.held_objects %}
+        <span class="label" style="color: #e65100;">Em Mãos:</span>
+        <div class="list-group" style="margin-bottom: 20px; border-color: #ffe0b2;">
+            {% for obj in container_view.held_objects %}
+            <div class="list-item" style="background-color: #fff3e0;">
+                <div>
+                    <span class="type-badge" style="background-color: #ffe0b2; color: #e65100;">{{ obj.type.value }}</span>
+                    <a href="/view/any/{{ obj.id }}" style="color: #e65100;">{{ obj.name }}</a>
+                </div>
+                <form action="/change/object/{{ obj.id }}/move?next={{ request.path }}" method="POST" style="margin: 0;">
+                    <input type="hidden" name="target_id" value="{{ container_view.info.id }}">
+                    <button type="submit" class="btn-sm">Depositar</button>
+                </form>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <span class="label">Conteúdo:</span>
         
         <div class="list-group">
@@ -73,7 +91,7 @@
                     <span class="type-badge">Container</span>
                     <a href="/view/any/{{ sub.id }}">{{ sub.name }}</a>
                 </div>
-                <form action="/change/{{ sub.id }}/lend?next={{ request.path }}" method="POST" style="margin: 0;">
+                <form action="/change/object/{{ sub.id }}/lend?next={{ request.path }}" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-sm">Emprestar</button>
                 </form>
             </div>
@@ -89,7 +107,7 @@
                     <div style="font-size: 0.85em; color: #666;">
                         {{ item.description or "" }}
                     </div>
-                    <form action="/change/item/{{ item.id }}/lend" method="POST" style="margin: 0;">
+                    <form action="/change/object/{{ item.id }}/lend?next={{ request.path }}" method="POST" style="margin: 0;">
                         <button type="submit" class="btn-sm">Emprestar</button>
                     </form>
                 </div>

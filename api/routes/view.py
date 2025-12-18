@@ -14,7 +14,7 @@ router = APIRouter(
 # 2. VISUALIZAR (O "Lazy Loading")
 # É aqui que seu App vai chamar quando ler o QR Code ou clicar numa pasta.
 @router.get("/container/{container_id}", response_model=ContainerView)
-def view_container_contents(container_id: str):
+def view_container_contents(request: Request, container_id: str):
     container_data = get_db().containers.find_one({"_id": container_id})
     if not container_data:
         raise HTTPException(status_code=404, detail="Container não encontrado")
@@ -39,6 +39,8 @@ def view_container_contents(container_id: str):
     owned_items = [enrich_object(Object(**item)) for item in all_items if item.get("original_parent_id") == container_id and item.get("parent_id") != container_id]
     owned_subcontainers = [enrich_object(Object(**cont)) for cont in all_subcontainers if cont.get("original_parent_id") == container_id and cont.get("parent_id") != container_id]
 
+    owner_id = request.session.get("usuario_logado")
+    held_objects = list(get_db().items.find({"parent_id": owner_id}))
     breadcrumbs = get_breadcrumbs(container_id)
 
     return ContainerView(
@@ -47,7 +49,8 @@ def view_container_contents(container_id: str):
         current_items=items,
         owned_items=owned_items,
         owned_subcontainers=owned_subcontainers,
-        path=breadcrumbs,
+        held_objects=held_objects,
+        path=breadcrumbs
     )
 
 @router.get(path="/item/{item_id}", response_model=ItemView)
@@ -156,7 +159,7 @@ async def ler_qr_code(request: Request, codigo: str):
     container_check = get_db().containers.find_one({"_id": codigo})
     if container_check:
         # Reutiliza a lógica de visualização de container
-        data = view_container_contents(codigo)
+        data = view_container_contents(request, codigo)
         return templates.TemplateResponse("container.html", {"request": request, "container_view": data})
 
     owner_check = get_db().owners.find_one({"_id": codigo})

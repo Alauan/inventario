@@ -44,6 +44,7 @@ class ContainerView(BaseModel):
     current_items: List[Object]
     owned_items: List[EnrichedObject]
     owned_subcontainers: List[EnrichedObject]
+    held_objects: List[Object]
     path: List[dict] # Breadcrumbs (ex: Galpão > Estante > Caixa)
 
 class ItemView(BaseModel):

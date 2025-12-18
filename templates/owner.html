@@ -62,7 +62,7 @@
                     <div style="font-size: 0.8em; color: #666;">{{ item.info.description or "" }}</div>
                 </div>
                 
-                <form action="/change/item/{{ item.info.id }}/return?next={{ request.path }}" method="POST" style="margin: 0;">
+                <form action="/change/object/{{ item.info.id }}/return?next={{ request.path }}" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-return" title="Devolver ao container original">
                         ↺ Devolver
                         {% if item.original_path %}
