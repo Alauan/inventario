@@ -100,8 +100,9 @@ def view_owner_contents(owner_id: str):
     owned_objects = []
     in_place_objects = []
     for object_dict in owned_objects_raw:
+        if object_dict.get("type") != ObjectType.ITEM:
+            continue
         enriched_object = enrich_object(Object(**object_dict))
-        
         if enriched_object.is_out_of_place:
             owned_objects.append(enriched_object)
         else:
