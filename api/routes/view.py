@@ -34,7 +34,7 @@ def view_container_contents(container_id: str):
         "info": container_data,
         "subcontainers": subcontainers,
         "items": items,
-        "caminho_pao": breadcrumbs
+        "path": breadcrumbs
     }
 
 @router.get(path="/item/{item_id}", response_model=ItemView)

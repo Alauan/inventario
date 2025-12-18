@@ -30,7 +30,7 @@ def get_breadcrumbs(container_id: str) -> list:
         if not container:
             break
         
-        caminho.insert(0, {"id": container["_id"], "nome": container["nome"]}) 
+        caminho.insert(0, {"_id": container["_id"], "name": container["name"]}) 
         atual_id = container.get("parent_id")
         
     return caminho
