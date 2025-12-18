@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from ..database import get_db, templates
-from ..structs import ContainerView, ItemView, OwnerView, EnrichedItem, Item, Owner
-from ..utils import get_breadcrumbs
+from ..structs import ContainerView, ItemView, OwnerView, EnrichedObject, Owner, Object
+from ..utils import get_breadcrumbs, enrich_object
 
 router = APIRouter(
     prefix="/view",
@@ -15,27 +15,40 @@ router = APIRouter(
 # É aqui que seu App vai chamar quando ler o QR Code ou clicar numa pasta.
 @router.get("/container/{container_id}", response_model=ContainerView)
 def view_container_contents(container_id: str):
-    
-    # A. Busca os dados do container atual
     container_data = get_db().containers.find_one({"_id": container_id})
     if not container_data:
         raise HTTPException(status_code=404, detail="Container não encontrado")
     
-    # B. Busca QUEM ESTÁ DENTRO (Filhos imediatos)
-    # Isso é muito rápido porque o MongoDB indexa o campo 'parent_id' e 'container_id'
-    subcontainers = list(get_db().containers.find({"parent_id": container_id}))
-    items = list(get_db().items.find({"container_id": container_id}))
-    
-    # C. Gera o caminho (Breadcrumbs) para o usuário saber onde está
+    all_subcontainers = list(get_db().containers.find({
+        "$or": [
+            {"parent_id": container_id},
+            {"original_parent_id": container_id}
+        ]
+    }))
+
+    all_items = list(get_db().items.find({
+        "$or": [
+            {"parent_id": container_id},
+            {"original_parent_id": container_id}
+        ]
+    }))
+
+    items = [item for item in all_items if item.get("parent_id") == container_id]
+    subcontainers = [cont for cont in all_subcontainers if cont.get("parent_id") == container_id]
+
+    owned_items = [enrich_object(Object(**item)) for item in all_items if item.get("original_parent_id") == container_id and item.get("parent_id") != container_id]
+    owned_subcontainers = [enrich_object(Object(**cont)) for cont in all_subcontainers if cont.get("original_parent_id") == container_id and cont.get("parent_id") != container_id]
+
     breadcrumbs = get_breadcrumbs(container_id)
 
-    # D. Monta o pacote de resposta
-    return {
-        "info": container_data,
-        "subcontainers": subcontainers,
-        "current_items": items,
-        "path": breadcrumbs
-    }
+    return ContainerView(
+        info=Object(**container_data),
+        subcontainers=subcontainers,
+        current_items=items,
+        owned_items=owned_items,
+        owned_subcontainers=owned_subcontainers,
+        path=breadcrumbs,
+    )
 
 @router.get(path="/item/{item_id}", response_model=ItemView)
 def view_item_contents(item_id: str):
@@ -54,17 +67,17 @@ def view_item_contents(item_id: str):
     owner_name = None
     owner_id = item_data.get("owner_id")
     if owner_id:
-        owner = get_db().owners.find_one({"_id": owner_id}, {"_id": 0, "nome": 1})
+        owner = get_db().owners.find_one({"_id": owner_id}, {"_id": 0, "name": 1})
         if owner:
-            owner_name = owner["nome"]
+            owner_name = owner["name"]
     
     # E. Monta o pacote de resposta
-    return {
-        "info": item_data,
-        "container_path": container_path,
-        "original_container_path": original_container_path,
-        "owner_name": owner_name
-    }
+    return ItemView(
+        info=Object(**item_data),
+        container_path=container_path,
+        original_container_path=original_container_path,
+        owner_name=owner_name
+    )
 
 @router.get("/owner/{owner_id}", response_model=OwnerView)
 def view_owner_contents(owner_id: str):
@@ -74,60 +87,51 @@ def view_owner_contents(owner_id: str):
         raise HTTPException(status_code=404, detail="Owner não encontrado")
     
     # B. Itens que estão FISICAMENTE com o owner
-    held_items_raw = list(get_db().items.find({"container_id": owner_id}))
-    held_items = []
-    for item_dict in held_items_raw:
+    held_objects_raw = list(get_db().items.find({"parent_id": owner_id}))
+    held_objects = []
+    for object_dict in held_objects_raw:
         path = [{"_id": owner_data["_id"], "name": owner_data["name"]}]
+        item_obj = Object(**object_dict)
         
-        item_obj = Item(**item_dict)
-        
-        item_view = ItemView(
+        item_view = EnrichedObject(
             info=item_obj,
-            container_path=path,
-            original_container_path=get_breadcrumbs(item_dict.get("original_container_id")),
-            owner_name=owner_data["name"]
+            path=path,
+            original_path=get_breadcrumbs(object_dict.get("original_parent_id"))
         )
-        held_items.append(item_view)
+        held_objects.append(item_view)
     
     # C. Itens que PERTENCEM ao owner (com dados extras)
-    owned_items_raw = list(get_db().items.find({"owner_id": owner_id}))
-    owned_items = []
-    in_place_items = []
-    for item_dict in owned_items_raw:
-        owner_lent = get_db().owners.find_one({"_id": item_dict.get("container_id")})
-        is_lent = (owner_lent is not None)
-        if is_lent:
-            path = [{"_id": owner_lent["_id"], "name": owner_lent["name"]}]
-        else:
-            path = get_breadcrumbs(item_dict.get("container_id"))
+    owned_objects_raw = list(get_db().items.find({"owner_id": owner_id}))
+    owned_objects = []
+    in_place_objects = []
+    for object_dict in owned_objects_raw:
+        path = get_breadcrumbs(object_dict.get("container_id"))
             
-        is_out_of_place = (item_dict.get("container_id") != item_dict.get("original_container_id"))
+        is_out_of_place = (object_dict.get("container_id") != object_dict.get("original_container_id"))
         
-        item_obj = Item(**item_dict)
+        item_obj = Object(**object_dict)
         
-        enriched_item = EnrichedItem(
+        enriched_item = EnrichedObject(
             info=item_obj,
-            container_path=path,
-            original_container_path=get_breadcrumbs(item_dict.get("original_container_id")),
-            owner_name=owner_data["name"],
-            is_out_of_place=is_out_of_place,
-            is_lent=is_lent
+            path=path,
+            original_path=get_breadcrumbs(object_dict.get("original_container_id")),
+            is_out_of_place=is_out_of_place
         )
         
         if is_out_of_place:
-            owned_items.append(enriched_item)
+            owned_objects.append(enriched_item)
         else:
-            in_place_items.append(enriched_item)
+            in_place_objects.append(enriched_item)
 
-    owned_items.extend(in_place_items)
+    owned_objects.extend(in_place_objects)
     # D. Containers raiz (sem pai)
     root_containers = list(get_db().containers.find({"parent_id": None}))
     
     # E. Monta o pacote de resposta
     return OwnerView(
         info=Owner(**owner_data),
-        held_items=held_items,
-        owned_items=owned_items,
+        held_objects=held_objects,
+        owned_objects=owned_objects,
         root_containers=root_containers
     )
 

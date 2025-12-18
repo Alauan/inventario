@@ -27,6 +27,8 @@
         .btn-sm { padding: 4px 8px; font-size: 0.8em; cursor: pointer; border-radius: 4px; border: 1px solid #ccc; background: white; margin-left: 10px; }
         .btn-sm:hover { background: #f0f0f0; }
 
+        .lent-item { background-color: #ffeaea; }
+
         /* Estilos do Modal (Dialog) */
         dialog { border: none; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 20px; width: 90%; max-width: 400px; }
         dialog::backdrop { background: rgba(0,0,0,0.5); }
@@ -47,7 +49,6 @@
                     <span style="color: #999; margin: 0 5px;">&gt;</span>
                 {% endfor %}
             {% endif %}
-            <span class="location-tag" style="background: #e0efff; color: #0070f3; font-weight: bold;">{{ container_view.info.name }}</span>
         </div>
 
         <div style="margin: 20px 0; display: flex; gap: 10px;">
@@ -70,9 +71,9 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Container</span>
-                    <a href="/view/any/{{ sub._id }}">{{ sub.name }}</a>
+                    <a href="/view/any/{{ sub.id }}">{{ sub.name }}</a>
                 </div>
-                <form action="/change/{{ sub._id }}/lend" method="POST" style="margin: 0;">
+                <form action="/change/{{ sub.id }}/lend" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-sm">Emprestar</button>
                 </form>
             </div>
@@ -82,19 +83,55 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Item</span>
-                    <a href="/view/any/{{ item._id }}">{{ item.name }}</a>
+                    <a href="/view/any/{{ item.id }}">{{ item.name }}</a>
                 </div>
                 <div style="display: flex; align-items: center;">
                     <div style="font-size: 0.85em; color: #666;">
                         {{ item.description or "" }}
                     </div>
-                    <form action="/change/item/{{ item._id }}/lend" method="POST" style="margin: 0;">
+                    <form action="/change/item/{{ item.id }}/lend" method="POST" style="margin: 0;">
                         <button type="submit" class="btn-sm">Emprestar</button>
                     </form>
                 </div>
             </div>
             {% endfor %}
         </div>
+
+        <!-- Seção de Itens Fora do Lugar -->
+        {% if container_view.owned_items %}
+            {% set ns = namespace(has_missing=false) %}
+            {% for item in container_view.owned_items %}
+                {% if item.is_out_of_place %}{% set ns.has_missing = true %}{% endif %}
+            {% endfor %}
+
+            {% if ns.has_missing %}
+                <span class="label" style="color: #d32f2f; margin-top: 30px;">Fora do Lugar: </span>
+                <div class="list-group">
+                    {% for item in container_view.owned_items %}
+                        {% if item.is_out_of_place %}
+                        <div class="list-item lent-item">
+                            <div>
+                                <span class="type-badge">Item</span>
+                                <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="breadcrumb" style="margin: 0;">
+                                    {% if item.path %}
+                                        {% for crumb in item.path %}
+                                            <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
+                                            {% if not loop.last %} &gt; {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <span style="color: #999;">Desconhecido</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endif %}
 
         <div class="actions">
             <a href="/" class="btn-secondary">← Voltar para Início</a>

@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware # cookies autenticados
 import os
-from ..structs import Container, Item, ContainerView, ItemView, Owner
+from ..structs import ContainerView, ItemView, Owner
 from ..database import get_db, templates
 from fastapi import APIRouter, Request
 

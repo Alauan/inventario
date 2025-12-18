@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse
 from ..database import get_db
-from ..structs import Container, Item, Owner
+from ..structs import Owner, Object, ObjectType
 
 
 router = APIRouter(
@@ -11,12 +11,12 @@ router = APIRouter(
 
 
 @router.post("/create/container")
-def create_container(container: Container):
+def create_container(container: Object):
     get_db().containers.insert_one(container.model_dump(by_alias=True))
     return {"status": "criado", "id": container.id}
 
 @router.post("/create/item")
-def create_item(item: Item):
+def create_item(item: Object):
     get_db().items.insert_one(item.model_dump(by_alias=True))
     return {"status": "criado", "id": item.id}
 
@@ -38,12 +38,13 @@ async def web_create_item(
     """
     # 1. Cria o objeto Item
     # Nota: Definimos tanto container_id quanto original_container_id
-    novo_item = Item(
+    novo_item = Object(
         name=name,
         description=description,
-        container_id=container_id,
-        original_container_id=container_id,
-        owner_id=request.session.get("usuario_logado")
+        parent_id=container_id,
+        original_parent_id=container_id,
+        owner_id=request.session.get("usuario_logado"),
+        type=ObjectType.ITEM
     )
     
     # 2. Salva no banco
@@ -66,7 +67,7 @@ def move_item(item_id: str, new_container_id: str):
     # Atualiza o item
     result = get_db().items.update_one(
         {"_id": item_id},
-        {"$set": {"container_id": new_container_id}}
+        {"$set": {"parent_id": new_container_id}}
     )
     
     if result.modified_count == 0:
@@ -74,7 +75,7 @@ def move_item(item_id: str, new_container_id: str):
         
     return {"status": "movido", "novo_local": new_container_id}
 
-@router.put("/item/{item_id}/return")
+@router.post("/item/{item_id}/return")
 def return_item_to_original(item_id: str):
     """
     Retorna um item para seu container original.
@@ -84,25 +85,22 @@ def return_item_to_original(item_id: str):
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado")
     
-    original_container_id = item.get("original_container_id")
-    if not original_container_id:
-        raise HTTPException(status_code=400, detail="Item não tem container original definido")
+    original_parent_id = item.get("original_parent_id")
+    if not original_parent_id:
+        raise HTTPException(status_code=400, detail="Item não tem container original definido ou apagado")
     
     # Atualiza o item para voltar ao container original
-    result = get_db().items.update_one(
+    get_db().items.update_one(
         {"_id": item_id},
-        {"$set": {"container_id": original_container_id}}
+        {"$set": {"parent_id": original_parent_id}}
     )
-    
-    if result.modified_count == 0:
-        raise HTTPException(status_code=400, detail="Item já está no container original")
         
-    return {"status": "retornado", "container_original": original_container_id}
+    return {"status": "retornado", "container_original": original_parent_id}
 
-@router.put("/item/{item_id}/lend")
+@router.post("/item/{item_id}/lend")
 def lend_item(request: Request, item_id: str):
     """
-    Empréstimo de um item: move o item para o container do usuário logado.
+    Empréstimo de um item: move o item para a mão do usuário logado.
     """
     # Busca o container do usuário logado
     user_id = request.session.get("usuario_logado")
@@ -112,7 +110,7 @@ def lend_item(request: Request, item_id: str):
     # Atualiza o item para o container do usuário
     result = get_db().items.update_one(
         {"_id": item_id},
-        {"$set": {"container_id": user_id}}
+        {"$set": {"parent_id": user_id}}
     )
     
     if result.modified_count == 0:
@@ -141,9 +139,12 @@ async def web_create_container(
     Cria um container via formulário Web.
     """
     # 1. Cria o objeto Container
-    novo_container = Container(
+    novo_container = Object(
         name=name,
-        parent_id=parent_id
+        parent_id=parent_id,
+        original_parent_id=parent_id,
+        owner_id=request.session.get("usuario_logado"),
+        type=ObjectType.CONTAINER
     )
     
     # 2. Salva no banco
@@ -163,7 +164,7 @@ def delete_container_recursive(container_id: str):
     # Função recursiva para deletar containers e seus conteúdos
     def deletar_recursivamente(cid: str):
         # Deleta todos os itens dentro deste container
-        db.items.delete_many({"container_id": cid})
+        db.items.delete_many({"parent_id": cid})
         
         # Encontra subcontainers
         subcontainers = db.containers.find({"parent_id": cid})
@@ -194,8 +195,8 @@ def delete_container(container_id: str):
     
     # Move itens para o container pai (ou raiz se não houver pai)
     db.items.update_many(
-        {"container_id": container_id},
-        {"$set": {"container_id": parent_id}}
+        {"parent_id": container_id},
+        {"$set": {"parent_id": parent_id}}
     )
     
     # Move subcontainers para o container pai (ou raiz se não houver pai)

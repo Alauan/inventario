@@ -51,11 +51,11 @@
     <div class="section">
         <h2>🎒 Itens em sua Posse (Segurados)</h2>
         <div class="item-list">
-            {% if not owner_view.held_items %}
+            {% if not owner_view.held_objects %}
                 <div class="empty-msg">Você não está segurando nenhum item no momento.</div>
             {% endif %}
 
-            {% for item in owner_view.held_items %}
+            {% for item in owner_view.held_objects %}
             <div class="item-row">
                 <div>
                     <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
@@ -65,10 +65,10 @@
                 <form action="/change/item/{{ item.info.id }}/return" method="POST" style="margin: 0;">
                     <button type="submit" class="btn-return" title="Devolver ao container original">
                         ↺ Devolver
-                        {% if item.original_container_path %}
+                        {% if item.original_path %}
                             <span style="font-size: 0.75em; font-weight: normal;">
                                      
-                                {% for crumb in item.original_container_path %}
+                                {% for crumb in item.original_path %}
                                     {{ crumb.name }}
                                     {% if not loop.last %} > {% endif %}
                                 {% endfor %}
@@ -84,11 +84,11 @@
     <div class="section">
         <h2>📦 Seus Itens (Patrimônio)</h2>
         <div class="item-list">
-            {% if not owner_view.owned_items %}
+            {% if not owner_view.owned_objects %}
                 <div class="empty-msg">Nenhum item registrado em seu nome.</div>
             {% endif %}
 
-            {% for item in owner_view.owned_items %}
+            {% for item in owner_view.owned_objects %}
             <div class="item-row {{ 'lent-item' if item.is_out_of_place else '' }}">
                 <div>
                     <a href="/view/any/{{ item.info.id }}">{{ item.info.name }}</a>
@@ -97,8 +97,8 @@
                     {% endif %}
                 </div>
                 <div class="breadcrumb">
-                    {% if item.container_path %}
-                        {% for crumb in item.container_path %}
+                    {% if item.path %}
+                        {% for crumb in item.path %}
                             <span class="location-tag"><a href="/view/any/{{ crumb._id }}">{{ crumb.name }}</a></span>
                             {% if not loop.last %}
                                 <span style="color: #999; margin: 0 5px;">&gt;</span>

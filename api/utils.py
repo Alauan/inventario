@@ -1,5 +1,6 @@
 from fastapi import Request, HTTPException
 from .database import get_db
+from .structs import EnrichedObject, Object
 
 async def verificar_login_global(request: Request):
     # Lista de rotas que são PÚBLICAS (não precisam de login)
@@ -19,18 +20,38 @@ async def verificar_login_global(request: Request):
         raise HTTPException(status_code=303, headers={"Location": "/auth/login"})
     
 
-def get_breadcrumbs(container_id: str) -> list:
-    caminho = []
-    atual_id = container_id
+def get_breadcrumbs(object_id: str | None) -> list:
+    if not object_id:
+        return []
     
+    caminho = []
+    
+    atual_id = object_id
     for _ in range(10):
         if not atual_id:
             break
-        container = get_db().containers.find_one({"_id": atual_id})
-        if not container:
+
+        obj = get_db().containers.find_one({"_id": atual_id})
+        if not obj:
+            obj = get_db().owners.find_one({"_id": atual_id})
+            if not obj:
+                break
+            caminho.insert(0, {"_id": obj["_id"], "name": obj["name"]})
             break
         
-        caminho.insert(0, {"_id": container["_id"], "name": container["name"]}) 
-        atual_id = container.get("parent_id")
+        caminho.insert(0, {"_id": obj["_id"], "name": obj["name"]}) 
+        atual_id = obj.get("parent_id")
         
     return caminho
+
+
+def enrich_object(object: Object) -> EnrichedObject:
+    path = get_breadcrumbs(object.parent_id)
+    original_path = get_breadcrumbs(object.original_parent_id)
+    
+    enriched = EnrichedObject(
+        info=object,
+        path=path,
+        original_path=original_path
+    )
+    return enriched
