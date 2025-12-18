@@ -35,7 +35,7 @@ class Owner(BaseModel):
 class ContainerView(BaseModel):
     info: Container
     subcontainers: List[Container]
-    items: List[Item]
+    current_items: List[Item]
     path: List[dict] # Breadcrumbs (ex: Galpão > Estante > Caixa)
 
 class ItemView(BaseModel):

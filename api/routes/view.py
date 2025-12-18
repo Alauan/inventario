@@ -33,7 +33,7 @@ def view_container_contents(container_id: str):
     return {
         "info": container_data,
         "subcontainers": subcontainers,
-        "items": items,
+        "current_items": items,
         "path": breadcrumbs
     }
 
