@@ -53,8 +53,7 @@ async def login(request: Request, nome_usuario: str = Form(...), senha: str = Fo
 
 @router.get("/login", response_class=HTMLResponse)
 def pagina_login(request: Request):
-    # Renderiza o login.html mas sem um "código alvo" específico
     return templates.TemplateResponse(
         "login.html", 
-        context={"request": request, "codigo_alvo": "home", "erro": None}
+        context={"request": request, "codigo_alvo": "", "erro": None}
     )
