@@ -4,7 +4,7 @@ from .database import db
 async def verificar_login_global(request: Request):
     # Lista de rotas que são PÚBLICAS (não precisam de login)
     rotas_publicas = [
-        "/auth/login"       # A página de login
+        "/auth/login",       # A página de login
         "/favicon.ico"    # O ícone do site
     ]
     
