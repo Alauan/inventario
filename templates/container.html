@@ -34,17 +34,17 @@
 <body>
 
     <div class="card">
-        <h1>{{ container_view.info.nome }}</h1>
+        <h1>{{ container_view.info.name }}</h1>
         
         <div class="breadcrumb">
-            {% if container_view.caminho_pao %}
-                {% for crumb in container_view.caminho_pao %}
-                    <span><a href="/access/{{ crumb._id }}">{{ crumb.nome }}</a></span>
+            {% if container_view.path %}
+                {% for crumb in container_view.path %}
+                    <span><a href="/access/{{ crumb._id }}">{{ crumb.name }}</a></span>
                 {% endfor %}
             {% else %}
                 <span>Raiz</span>
             {% endif %}
-            <span>{{ container_view.info.nome }}</span>
+            <span>{{ container_view.info.name }}</span>
         </div>
 
         <div style="margin: 20px 0;">
@@ -64,7 +64,7 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Container</span>
-                    <a href="/access/{{ sub._id }}">{{ sub.nome }}</a>
+                    <a href="/access/{{ sub._id }}">{{ sub.name }}</a>
                 </div>
             </div>
             {% endfor %}
@@ -73,10 +73,10 @@
             <div class="list-item">
                 <div>
                     <span class="type-badge">Item</span>
-                    <a href="/access/{{ item._id }}">{{ item.nome }}</a>
+                    <a href="/access/{{ item._id }}">{{ item.name }}</a>
                 </div>
                 <div style="font-size: 0.85em; color: #666;">
-                    {{ item.descricao or "" }}
+                    {{ item.description or "" }}
                 </div>
             </div>
             {% endfor %}
@@ -89,16 +89,16 @@
 
     <dialog id="modalItem">
         <h3 style="margin-top: 0;">Novo Item</h3>
-        <p style="font-size: 0.9em; color: #666;">Este item terá origem em: <strong>{{ container_view.info.nome }}</strong></p>
+        <p style="font-size: 0.9em; color: #666;">Este item terá origem em: <strong>{{ container_view.info.name }}</strong></p>
         
-        <form action="/web/create_item" method="POST">
+        <form action="/change/form/item" method="POST">
             <input type="hidden" name="container_id" value="{{ container_view.info._id }}">
             
-            <label for="nome">Nome do Item</label>
-            <input type="text" id="nome" name="nome" placeholder="Ex: Parafusadeira" required autofocus>
+            <label for="name">Nome do Item</label>
+            <input type="text" id="name" name="name" placeholder="Ex: Parafusadeira" required autofocus>
             
-            <label for="descricao">Descrição (Opcional)</label>
-            <input type="text" id="descricao" name="descricao" placeholder="Marca, cor, etc.">
+            <label for="description">Descrição (Opcional)</label>
+            <input type="text" id="description" name="description" placeholder="Marca, cor, etc.">
 
             <div class="form-actions">
                 <button type="button" class="btn-cancel" onclick="document.getElementById('modalItem').close()">Cancelar</button>

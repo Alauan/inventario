@@ -18,13 +18,13 @@
 <body>
 
     <div class="card">
-        <h1>{{ item_view.info.nome }}</h1>
+        <h1>{{ item_view.info.name }}</h1>
         
         <span class="label">ID:</span>
-        <span>{{ item_view.info.id }}</span>
+        <span>{{ item_view.info._id }}</span>
 
         <span class="label">Descrição:</span>
-        <p>{{ item_view.info.descricao or "Sem descrição" }}</p>
+        <p>{{ item_view.info.description or "Sem descrição" }}</p>
 
         <span class="label">Proprietário:</span>
         <span>{{ item_view.owner_name or "Não atribuído" }}</span>
@@ -35,7 +35,7 @@
         <div class="breadcrumb">
             {% if item_view.container_path %}
                 {% for crumb in item_view.container_path %}
-                    <span><a href="/container/{{ crumb.id }}">{{ crumb.nome }}</a></span>
+                    <span><a href="/container/{{ crumb._id }}">{{ crumb.name }}</a></span>
                 {% endfor %}
             {% else %}
                 <span>Raiz (Sem container)</span>
@@ -46,7 +46,7 @@
         <div class="breadcrumb">
             {% if item_view.original_container_path %}
                 {% for crumb in item_view.original_container_path %}
-                    <span>{{ crumb.nome }}</span>
+                    <span>{{ crumb.name }}</span>
                 {% endfor %}
             {% else %}
                 <span>Não definida</span>

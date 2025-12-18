@@ -9,8 +9,8 @@ def generate_id():
 # --- 1. ITEM (A Folha) ---
 class Item(BaseModel):
     id: str = Field(default_factory=generate_id, alias="_id")
-    nome: str
-    descricao: Optional[str] = None
+    name: str
+    description: Optional[str] = None
     
     container_id: Optional[str] = None 
     original_container_id: Optional[str] = None
@@ -19,14 +19,14 @@ class Item(BaseModel):
 # --- 2. CONTAINER (O Nó) ---
 class Container(BaseModel):
     id: str = Field(default_factory=generate_id, alias="_id")
-    nome: str
+    name: str
     parent_id: Optional[str] = None
     
 
 class Owner(BaseModel):
     id: str = Field(default_factory=generate_id, alias="_id")
     cpf: str
-    nome: str
+    name: str
 
 # --- 3. DTOs (Data Transfer Objects) ---
 # Estas classes servem apenas para ENVIAR dados combinados para o Frontend
@@ -36,10 +36,23 @@ class ContainerView(BaseModel):
     info: Container
     subcontainers: List[Container]
     items: List[Item]
-    caminho_pao: List[dict] # Breadcrumbs (ex: Galpão > Estante > Caixa)
+    path: List[dict] # Breadcrumbs (ex: Galpão > Estante > Caixa)
 
 class ItemView(BaseModel):
     info: Item
     container_path: List[dict] # Breadcrumbs do container onde o item está
     original_container_path: List[dict]
     owner_name: Optional[str] = None
+
+class EnrichedItem(Item):       # Somente para visualização
+    """
+    Herda de Item, mas adiciona campos calculados apenas para visualização
+    """
+    path: List[dict] # Breadcrumbs do container onde o item está
+    is_lent: bool = False # Se está emprestado/fora do lugar
+
+class OwnerView(BaseModel):
+    info: Owner
+    held_items: List[Item]          # Itens que estão FISICAMENTE com o owner
+    owned_items: List[EnrichedItem] # Itens que PERTENCEM ao owner (com dados extras)
+    root_containers: List[Container]
