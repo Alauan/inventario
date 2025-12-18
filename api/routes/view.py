@@ -80,10 +80,9 @@ def view_owner_contents(owner_id: str):
     owned_items_raw = list(get_db().items.find({"owner_id": owner_id}))
     owned_items = []
     for item in owned_items_raw:
-        enriched_item = EnrichedItem(**item)
-        
-        enriched_item.path = get_breadcrumbs(item.get("container_id"))
-        enriched_item.is_lent = (item.get("container_id") != item.get("original_container_id"))
+        path = get_breadcrumbs(item.get("container_id"))
+        is_lent = (item.get("container_id") != item.get("original_container_id"))
+        enriched_item = EnrichedItem(**item, path=path, is_lent=is_lent)
         owned_items.append(enriched_item)
     # D. Containers raiz (sem pai)
     root_containers = list(get_db().containers.find({"parent_id": None}))

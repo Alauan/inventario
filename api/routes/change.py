@@ -50,7 +50,7 @@ async def web_create_item(
     get_db().items.insert_one(novo_item.model_dump(by_alias=True))
     
     # 3. Redireciona de volta para a visualização do container
-    return RedirectResponse(url=f"/access/{container_id}", status_code=303)
+    return RedirectResponse(url=f"/view/any/{container_id}", status_code=303)
 
 
 @router.put("/item/{item_id}/move")
