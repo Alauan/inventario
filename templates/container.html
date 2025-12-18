@@ -70,7 +70,7 @@
                     <a href="/view/any/{{ obj.id }}" style="color: #e65100;">{{ obj.name }}</a>
                 </div>
                 <form action="/change/object/{{ obj.id }}/move?next={{ request.path }}" method="POST" style="margin: 0;">
-                    <input type="hidden" name="target_id" value="{{ container_view.info.id }}">
+                    <input type="hidden" name="new_container_id" value="{{ container_view.info.id }}">
                     <button type="submit" class="btn-sm">Depositar</button>
                 </form>
             </div>

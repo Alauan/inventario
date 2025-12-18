@@ -31,7 +31,7 @@ def get_breadcrumbs(object_id: str | None) -> list:
         if not atual_id:
             break
 
-        obj = get_db().containers.find_one({"_id": atual_id})
+        obj = get_db().objects.find_one({"_id": atual_id})
         if not obj:
             obj = get_db().owners.find_one({"_id": atual_id})
             if not obj:
