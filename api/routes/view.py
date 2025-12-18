@@ -121,10 +121,3 @@ async def ler_qr_code(request: Request, codigo: str):
 
     # 3. Não encontrou nada
     return HTMLResponse("<h1>Código não encontrado no sistema.</h1>", status_code=404)
-
-@router.get("/any", response_class=HTMLResponse)
-async def pagina_inicial(request: Request):
-    owner_id = request.session.get("usuario_logado")
-    if not owner_id:
-        return RedirectResponse(url="/auth/login", status_code=303)
-    return RedirectResponse(url=f"/view/any/{owner_id}", status_code=303)
