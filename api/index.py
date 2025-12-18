@@ -24,16 +24,6 @@ async def pagina_inicial(request: Request):
     owner_id = request.session.get("usuario_logado")
     if not owner_id:
         return RedirectResponse(url="/auth/login", status_code=303)
-    try:
-        oid = ObjectId(owner_id)
-        
-        if not get_db().owners.find_one({"_id": oid}):
-            raise ValueError("Usuário deletado ou inexistente")
-            
-    except (errors.InvalidId, ValueError, TypeError):
-        request.session.clear()
-        return RedirectResponse(url="/auth/login", status_code=303)
-
     return RedirectResponse(url=f"/view/any/home", status_code=303)
 
 
