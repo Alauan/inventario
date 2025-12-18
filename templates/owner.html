@@ -116,7 +116,7 @@
         <h2>🏢 Locais Principais</h2>
         <div class="root-grid">
             {% for root in owner_view.root_containers %}
-                <a href="/view/any/{{ root._id }}" class="root-card">
+                <a href="/view/any/{{ root.id }}" class="root-card">
                     {{ root.name }}
                 </a>
             {% endfor %}

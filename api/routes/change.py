@@ -132,7 +132,7 @@ def delete_item(item_id: str):
     return {"status": "deletado", "id": item_id}
 
 
-@router.post("/form/crate/container")
+@router.post("/form/create/container")
 async def web_create_container(
     request: Request,
     name: str = Form(...),
